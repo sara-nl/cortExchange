@@ -24,7 +24,7 @@ def create_argparse(predictor_class: type(Predictor) = None) -> argparse.Namespa
     parser.add_argument("--device", type=str, default="cpu", help="Device for inference, default=cpu.")
 
     parser.add_argument(
-        "--wd-hostname",
+        "--wd-url",
         type=str,
         default="https://surfdrive.surf.nl/files/public.php/webdav/",
         help="URL where webdav is available for the to-be-downloaded models."
