@@ -5,6 +5,10 @@ import torch
 from cortexchange.models.surf_stop_model import ImagenetTransferLearning, process_fits  # noqa
 from cortexchange.predictor import Predictor
 
+import __main__
+
+setattr(__main__, "ImagenetTransferLearning", ImagenetTransferLearning)
+
 
 class StopPredictor(Predictor):
     def __init__(self, model_name: str, device: str, variational_dropout: int = 0):
