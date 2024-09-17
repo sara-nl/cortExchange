@@ -1,3 +1,4 @@
+import importlib
 import logging
 
 from cortexchange.downloader import init_downloader
@@ -17,8 +18,9 @@ def main():
 
     org, name = segments
     try:
-        predictor = __import__(f"cortexchange.predictor.{org}.{name}")
-    except ImportError:
+        module_org = importlib.import_module(f"cortexchange.predictor.{org}")
+        predictor = getattr(module_org, name)
+    except (ImportError, AttributeError):
         logging.error(
             f"No module found with name {model_type}. "
             f"Pass a valid predictor module with `--model_configuration=organization/model`"
