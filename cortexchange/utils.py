@@ -13,7 +13,7 @@ def create_argparse(predictor_class: type(Predictor) = None) -> argparse.Namespa
         help="What model configuration to use. This is formatted as 'organization/model_name'."
     )
 
-    parser.add_argument("--cache", type=str, default=".cache", help="Where to store the downloaded model weights.")
+    parser.add_argument("--cache", type=str, default="~/.cache/cortexchange", help="Where to store the downloaded model weights.")
     parser.add_argument(
         "--model",
         type=str,
