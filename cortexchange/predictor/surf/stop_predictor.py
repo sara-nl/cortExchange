@@ -1,26 +1,18 @@
 import functools
-import os
 
 import torch
 
-from cortexchange.pre_processing_for_ml import process_fits
+from cortexchange.models.surf_stop_model import ImagenetTransferLearning, process_fits  # noqa
 from cortexchange.predictor import Predictor
-from cortexchange.models.surf_stop_model import ImagenetTransferLearning  # noqa
-from cortexchange.models.surf_stop_model import load_checkpoint
-from cortexchange.utils import download_model, create_argparse
 
 
 class StopPredictor(Predictor):
-    def __init__(self, cache, model_name: str, device: str, variational_dropout: int = 0):
+    def __init__(self, model_name: str, device: str, variational_dropout: int = 0):
+        super().__init__(model_name, device)
+
         self.dtype = torch.float32
-        self.device = device
-        model_path = os.path.join(cache, model_name)
-        if not os.path.exists(model_path):
-            download_model(cache, model_name)
 
-        checkpoint = load_checkpoint(model_path, device)
-        super().__init__(checkpoint.get("model").to(self.dtype))
-
+        self.model = self.model.to(self.dtype)
         self.model.eval()
 
         assert variational_dropout >= 0
@@ -61,18 +53,3 @@ class StopPredictor(Predictor):
             default=None,
             help="Optional: Amount of times to run the model to obtain a variational estimate of the stdev"
         )
-
-
-def main(args):
-    predictor = StopPredictor(
-        cache=args.cache,
-        device=args.device,
-        model_name=args.model,
-        variational_dropout=args.variational_dropout
-    )
-    print("Initialized models")
-    predictor.predict(input_path=args.input)
-
-
-if __name__ == "__main__":
-    main(create_argparse())

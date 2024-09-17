@@ -1,23 +1,69 @@
-import argparse
 import os
-import pickle
-from functools import partial, lru_cache
+from functools import partial
 from pathlib import Path
 
-import torch
-import torcheval.metrics.functional as tef
-from torch import nn, binary_cross_entropy_with_logits
-from torch.nn.functional import interpolate
-from torch.utils.data import SequentialSampler, Sampler
-from torch.utils.tensorboard import SummaryWriter
-from torchvision import models
-from torchvision.transforms import v2
-from tqdm import tqdm
-
+import matplotlib.pyplot as plt
 import numpy as np
-import random
+import torch
+from astropy.io import fits
+from matplotlib.colors import SymLogNorm
+from torch import nn, binary_cross_entropy_with_logits
+from torchvision import models
 
-from cortexchange.pre_processing_for_ml import FitsDataset
+
+def get_rms(data: np.ndarray, maskSup=1e-7):
+    """
+    find the rms of an array, from Cycil Tasse/kMS
+
+    :param data: numpy array
+    :param maskSup: mask threshold
+
+    :return: rms --> rms of image
+    """
+
+    mIn = np.ndarray.flatten(data)
+    m = mIn[np.abs(mIn) > maskSup]
+    rmsold = np.std(m)
+    diff = 1e-1
+    cut = 3.
+    med = np.median(m)
+
+    for i in range(10):
+        ind = np.where(np.abs(m - med) < rmsold * cut)[0]
+        rms = np.std(m[ind])
+        if np.abs((rms - rmsold) / rmsold) < diff:
+            break
+        rmsold = rms
+
+    return rms  # jy/beam
+
+
+def normalize_fits(image_data: np.ndarray):
+    image_data = image_data.squeeze()
+
+    # Pre-processing
+    rms = get_rms(image_data)
+    norm = SymLogNorm(linthresh=rms * 2, linscale=2, vmin=-rms, vmax=rms * 50000, base=10)
+
+    image_data = norm(image_data)
+    image_data = np.clip(image_data - image_data.min(), a_min=0, a_max=1)
+
+    # make RGB image
+    cmap = plt.get_cmap('RdBu_r')
+    image_data = cmap(image_data)
+    image_data = np.delete(image_data, 3, 2)
+
+    image_data = -image_data + 1  # make the peak exist at zero
+
+    return image_data
+
+
+def process_fits(fits_path):
+    with fits.open(fits_path) as hdul:
+        image_data = hdul[0].data
+
+    return normalize_fits(image_data)
+
 
 PROFILE = False
 SEED = None
@@ -99,14 +145,6 @@ def normalize_inputs(inputs, mode=0):
     return (inputs - means) / stds
 
 
-@torch.no_grad()
-def augmentation(inputs):
-    inputs = get_transforms()(inputs)
-    inputs = inputs + 0.01 * torch.randn_like(inputs)
-
-    return inputs
-
-
 class ImagenetTransferLearning(nn.Module):
     def __init__(
         self,
@@ -183,350 +221,6 @@ class ImagenetTransferLearning(nn.Module):
             self.classifier.train()
 
 
-def get_dataloaders(dataset_root, batch_size):
-    num_workers = min(12, len(os.sched_getaffinity(0)))
-    prefetch_factor, persistent_workers = (
-        (2, True) if num_workers > 0 else
-        (None, False)
-    )
-    generators = {}
-    for mode in ('val', 'train'):
-        generators[mode] = torch.Generator()
-        if SEED is not None:
-            generators[mode].manual_seed(SEED)
-
-    loaders = tuple(
-        MultiEpochsDataLoader(
-            dataset=FitsDataset(dataset_root, mode=mode),
-            batch_size=batch_size,
-            num_workers=num_workers,
-            prefetch_factor=prefetch_factor,
-            persistent_workers=persistent_workers,
-            worker_init_fn=seed_worker,
-            generator=generators[mode],
-            pin_memory=True,
-            shuffle=True if mode == 'train' else False,
-            drop_last=True if mode == 'train' else False,
-        )
-        for mode in ('train', 'val')
-    )
-
-    return loaders
-
-
-def get_logging_dir(logging_root: str, /, **kwargs):
-    # As version string, prefer $SLURM_ARRAY_JOB_ID, then $SLURM_JOB_ID, then 0.
-    version = int(os.getenv('SLURM_ARRAY_JOB_ID', os.getenv('SLURM_JOB_ID', 0)))
-    version_appendix = int(os.getenv('SLURM_ARRAY_TASK_ID', 0))
-    while True:
-        version_dir = "__".join(
-            (
-                f"version_{version}_{version_appendix}",
-                *(f"{k}_{v}" for k, v in kwargs.items())
-            )
-        )
-
-        logging_dir = Path(logging_root) / version_dir
-
-        if not logging_dir.exists():
-            break
-        version_appendix += 1
-
-    return str(logging_dir.resolve())
-
-
-def get_tensorboard_logger(logging_dir):
-    writer = SummaryWriter(log_dir=str(logging_dir))
-
-    # writer.add_hparams()
-
-    return writer
-
-
-def write_metrics(writer, metrics: dict, global_step: int):
-    for metric_name, value in metrics.items():
-        if isinstance(value, tuple):
-            probs, labels = value
-            writer_fn = partial(
-                writer.add_pr_curve, labels=labels, predictions=probs,
-            )
-        else:
-            writer_fn = partial(
-                writer.add_scalar, scalar_value=value
-            )
-
-        writer_fn(tag=metric_name, global_step=global_step)
-
-
-def get_optimizer(parameters: list[torch.Tensor], lr: float):
-    return torch.optim.AdamW(parameters, lr=lr)
-
-
-def merge_metrics(suffix, **kwargs):
-    return {
-        f"{k}/{suffix}": v for k, v in kwargs.items()
-    }
-
-
-@torch.no_grad()
-def prepare_data(data: torch.Tensor, labels: torch.Tensor, resize: int, normalize: int, device: torch.device):
-    # FIXME: probably don't need the .clone(), check if we can remove it
-    data, labels = (
-        data.clone().to(device, non_blocking=True, memory_format=torch.channels_last),
-        labels.clone().to(device, non_blocking=True, dtype=data.dtype)
-    )
-
-    if resize:
-        data = interpolate(data, size=resize, mode='bilinear', align_corners=False)
-
-    data = normalize_inputs(data, mode=normalize)
-
-    return data, labels
-
-
-def main(
-    dataset_root: str,
-    model_name: str,
-    lr: float,
-    resize: int,
-    normalize: int,
-    dropout_p: float,
-    batch_size: int,
-    use_compile: bool
-):
-    torch.set_float32_matmul_precision('high')
-
-    profiler_kwargs = {}
-
-    if PROFILE:
-        pass
-        # profiling_dir = str(logging_dir)
-        #
-        # global profiler
-        # profiler = torch.profiler.profile(
-        #     schedule=torch.profiler.schedule(wait=0, warmup=1, active=9, repeat=0),
-        #     on_trace_ready=torch.profiler.tensorboard_trace_handler(profiling_dir),
-        # )
-        #
-        # profiler.start()
-
-    logging_dir = get_logging_dir(
-        str(Path.cwd() / 'grid_search'),
-        # kwargs
-        model=model_name,
-        lr=lr,
-        normalize=normalize,
-        dropout_p=dropout_p,
-        use_compile=use_compile
-    )
-
-    writer = get_tensorboard_logger(logging_dir)
-
-    device = torch.device('cuda')
-
-    model: nn.Module = ImagenetTransferLearning(model_name=model_name, dropout_p=dropout_p, use_compile=use_compile)
-
-    # noinspection PyArgumentList
-    model.to(device=device, memory_format=torch.channels_last)
-
-    optimizer = get_optimizer([param for param in model.parameters() if param.requires_grad], lr=lr)
-
-    train_dataloader, val_dataloader = get_dataloaders(dataset_root, batch_size)
-
-    logging_interval = 10
-
-    train_step_f, val_step_f = (
-        partial(
-            step_f,
-            prepare_data_f=partial(prepare_data, resize=resize, normalize=normalize, device=device),
-            metrics_logger=partial(log_metrics, write_metrics_f=partial(write_metrics, writer=writer))
-        )
-        for step_f in (train_step, val_step)
-    )
-
-    train_step_f = partial(
-        train_step_f,
-        train_dataloader=train_dataloader,
-        optimizer=optimizer,
-        logging_interval=logging_interval
-    )
-    val_step_f = partial(val_step_f, val_dataloader=val_dataloader)
-
-    checkpoint_saver = partial(
-        save_checkpoint,
-        logging_dir=logging_dir,
-        model=model,
-        optimizer=optimizer,
-        normalize=normalize,
-        batch_size=batch_size
-    )
-
-    best_val_loss = torch.inf
-    global_step = 0  # make it a tensor so we can do in-place edits
-
-    best_results = {}
-
-    n_epochs = 250
-    for epoch in range(n_epochs):
-
-        global_step = train_step_f(global_step=global_step, model=model)
-        val_loss, logits, targets = val_step_f(global_step=global_step, model=model)
-        if val_loss < best_val_loss:
-            best_results['logits'] = logits.clone()
-            best_results['targets'] = targets.clone()
-            checkpoint_saver(global_step=global_step)
-            best_val_loss = val_loss
-        with torch.no_grad():
-            log_metrics(
-                loss=best_val_loss,
-                logits=best_results['logits'],
-                targets=best_results['targets'],
-                global_step=global_step,
-                log_suffix='validation_best',
-                write_metrics_f=partial(write_metrics, writer=writer)
-            )
-
-    if PROFILE:
-        profiler.stop()
-
-    writer.flush()
-    writer.close()
-
-
-@torch.no_grad()
-def log_metrics(loss, logits, targets, log_suffix, global_step, write_metrics_f):
-    probs = torch.sigmoid(logits)
-    ap = tef.binary_auprc(probs, targets)
-
-    metrics = merge_metrics(
-        bce_loss=loss,
-        au_pr_curve=ap,
-        pr_curve=(probs.to(torch.float32), targets.to(torch.float32)),
-        suffix=log_suffix
-    )
-
-    write_metrics_f(metrics=metrics, global_step=global_step)
-
-
-@torch.no_grad()
-def val_step(model, val_dataloader, global_step, metrics_logger, prepare_data_f):
-    val_losses, val_logits, val_targets = [], [], []
-
-    model.eval()
-    for i, (data, labels) in tqdm(enumerate(val_dataloader), desc='Validation', total=len(val_dataloader)):
-        # print("validation start")
-
-        data, labels = prepare_data_f(data, labels)
-        with torch.autocast('cuda', dtype=torch.bfloat16):
-            logits, loss = model.step(data, labels)
-        val_losses.append(loss)
-        val_logits.append(logits.clone())
-        val_targets.append(labels)
-    losses, logits, targets = map(torch.concatenate, (val_losses, val_logits, val_targets))
-
-    mean_loss = losses.mean()
-    metrics_logger(loss=mean_loss, logits=logits, targets=targets, global_step=global_step, log_suffix='validation')
-
-    return mean_loss, logits, targets
-
-
-def train_step(model, optimizer, train_dataloader, prepare_data_f, global_step, logging_interval, metrics_logger):
-    # print("training")
-    model.train()
-
-    for i, (data, labels) in tqdm(enumerate(train_dataloader), desc='Training', total=len(train_dataloader)):
-        global_step += 1
-
-        data, labels = prepare_data_f(data, labels)
-
-        data = augmentation(data)
-
-        optimizer.zero_grad(set_to_none=True)
-        with torch.autocast('cuda', dtype=torch.bfloat16):
-            logits, loss = model.step(data, labels)
-            mean_loss = loss.mean()
-
-        mean_loss.backward()
-        optimizer.step()
-        if i % logging_interval == 0:
-            with torch.no_grad():
-                metrics_logger(
-                    loss=mean_loss.detach(),
-                    logits=logits.detach(),
-                    targets=labels,
-                    global_step=global_step,
-                    log_suffix='training'
-                )
-
-    return global_step
-
-
-class MultiEpochsDataLoader(torch.utils.data.DataLoader):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._DataLoader__initialized = False
-        if self.batch_sampler is None:
-            self.sampler = _RepeatSampler(self.sampler)
-        else:
-            self.batch_sampler = _RepeatSampler(self.batch_sampler)
-        self._DataLoader__initialized = True
-        self.iterator = super().__iter__()
-
-    def __len__(self):
-        return len(self.sampler) if self.batch_sampler is None else len(self.batch_sampler.sampler)
-
-    def __iter__(self):
-        for i in range(len(self)):
-            yield next(self.iterator)
-
-
-class _RepeatSampler(object):
-    """ Sampler that repeats forever.
-
-    Args:
-        sampler (Sampler)
-    """
-
-    def __init__(self, sampler):
-        self.sampler = sampler
-
-    def __iter__(self):
-        while True:
-            yield from iter(self.sampler)
-
-
-@lru_cache(maxsize=1)
-def get_transforms():
-    return v2.Compose(
-        [
-            v2.ColorJitter(brightness=.5, hue=.3, saturation=0.1, contrast=0.1),
-            v2.RandomInvert(),
-            v2.RandomEqualize(),
-            v2.RandomVerticalFlip(p=0.5),
-            v2.RandomHorizontalFlip(p=0.5),
-        ]
-    )
-
-
-def save_checkpoint(logging_dir, model, optimizer, global_step, **kwargs):
-    old_checkpoints = Path(logging_dir).glob('*.pth')
-    for old_checkpoint in old_checkpoints:
-        Path.unlink(old_checkpoint)
-
-    torch.save(
-        {
-            'model': type(model),
-            'model_state_dict': model.state_dict(),
-            'optimizer': type(optimizer),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'step': global_step,
-            **kwargs
-        },
-        f=(logging_dir + f'/ckpt_step={global_step}.pth')
-    )
-
-
 def load_checkpoint(ckpt_path, device="gpu"):
     if os.path.isfile(ckpt_path):
         ckpt_dict = torch.load(ckpt_path, weights_only=False, map_location=device)
@@ -562,73 +256,3 @@ def load_checkpoint(ckpt_path, device="gpu"):
     ).load_state_dict(ckpt_dict['optimizer_state_dict'])
 
     return {'model': model, 'optim': optim, 'normalize': normalize}
-
-
-def get_argparser():
-    """
-    Create and return an argument parser for hyperparameter tuning.
-    """
-    # Create the parser
-    parser = argparse.ArgumentParser(description="Hyperparameter tuning for a machine learning model.")
-
-    # Add arguments
-    parser.add_argument('dataset_root', type=Path)
-    parser.add_argument('--lr', type=float, help='Learning rate for the model.', default=1e-4)
-    parser.add_argument('--batch_size', type=int, help='Batch size', default=12)
-    parser.add_argument(
-        '--model_name', type=str, help='The model to use.', default='resnet50',
-        choices=['resnet50', 'resnet152', 'resnext50_32x4d', 'resnext101_64x4d', 'efficientnet_v2_l', 'vit_l_16']
-    )
-    parser.add_argument('--normalize', type=int, help='Whether to do normalization', default=0, choices=[0, 1, 2])
-    parser.add_argument('--dropout_p', type=float, help='Dropout probability', default=0.25)
-    parser.add_argument('--resize', type=int, default=0, help="size to resize to. Will be set to 512 for ViT.")
-    parser.add_argument('--use_compile', action='store', type=int, default=1)
-    parser.add_argument('--no_compile', dest='use_compile', action='store_false')
-    parser.add_argument('--profile', action='store_true', help="[DISABLED] profile the training and validation loop")
-    parser.add_argument('-d', '--deterministic', action='store_true', help="use deterministic training", default=False)
-
-    return parser.parse_args()
-
-
-def sanity_check_args(parsed_args):
-    assert parsed_args.lr >= 0
-    assert parsed_args.batch_size >= 0
-    assert 0 <= parsed_args.dropout_p <= 1
-    assert parsed_args.resize >= 0
-    # ViT always needs the input size to be 512x512
-    if parsed_args.model_name == 'vit_l_16' and parsed_args.resize != 512:
-        print("Setting resize to 512 since vit_16_l is being used")
-        parsed_args.resize = 512
-
-    return parsed_args
-
-
-def set_seed(seed):
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    random.seed(seed)
-    # torch.use_deterministic_algorithms(True)
-    # torch.utils.deterministic.fill_uninitialized_memory = False
-
-
-def seed_worker(worker_id):
-    worker_seed = torch.initial_seed() % 2 ** 32
-    np.random.seed(worker_id)
-    random.seed(worker_seed)
-
-
-if __name__ == '__main__':
-    args = get_argparser()
-    parsed_args = sanity_check_args(args)
-    kwargs = vars(args)
-    print(kwargs)
-
-    if kwargs['profile']:
-        PROFILE = True
-    if kwargs['deterministic']:
-        SEED = 42
-        set_seed(SEED)
-    del kwargs['deterministic']
-    del kwargs['profile']
-
-    main(**kwargs)
