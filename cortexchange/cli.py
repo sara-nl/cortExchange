@@ -13,6 +13,7 @@ def main():
 
     if model_type is None:
         logging.error(f"Please pass your model with `--model_configuration=organization/model`.")
+        return exit(1)
 
     segments = model_type.split("/", 1)
     if len(segments) == 1:
