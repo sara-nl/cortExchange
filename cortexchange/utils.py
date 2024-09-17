@@ -39,4 +39,6 @@ def create_argparse(predictor_class: type(Predictor) = None) -> argparse.Namespa
 
     if predictor_class is not None:
         predictor_class.add_argparse_args(parser)
-    return parser.parse_args()
+        return parser.parse_args()
+    else:
+        return parser.parse_known_args()[0]
