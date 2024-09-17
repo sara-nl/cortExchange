@@ -11,9 +11,12 @@ def main():
 
     model_type: str = args.model_configuration
 
+    if model_type is None:
+        logging.error(f"Please pass your model with `--model_configuration=organization/model`.")
+
     segments = model_type.split("/", 1)
     if len(segments) == 1:
-        logging.error(f"Invalid format: should be `--model_configuration=organization/model`")
+        logging.error(f"Invalid format: should be `--model_configuration=organization/model`.")
         return exit(1)
 
     org, name = segments
@@ -23,7 +26,7 @@ def main():
     except (ImportError, AttributeError):
         logging.error(
             f"No module found with name {model_type}. "
-            f"Pass a valid predictor module with `--model_configuration=organization/model`"
+            f"Pass a valid predictor module with `--model_configuration=organization/model`."
         )
         return exit(1)
 
