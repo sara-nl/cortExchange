@@ -10,7 +10,7 @@ pip install -r requirements.txt
 
 Install this package as follows:
 ```
-pip install -e "git+https://github.com/jurjen93/lofar_helpers.git#egg=cortex&subdirectory=neural_networks"
+pip install -e "git+https://github.com/sara-nl/cortExchange"
 ```
 
 You can then initialize the predictor as follows:
