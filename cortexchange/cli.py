@@ -40,13 +40,10 @@ def main():
 
     init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=args.cache)
 
-    predictor = predictor(
-        device=args.device,
-        model_name=args.model,
-        variational_dropout=args.variational_dropout
-    )
+    predictor = predictor(*vars(args))
 
-    predictor.predict(input_path=args.input)
+    data = predictor.prepare_data(args.input)
+    predictor.predict(data)
 
 
 if __name__ == "__main__":

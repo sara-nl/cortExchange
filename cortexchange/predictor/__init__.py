@@ -10,7 +10,7 @@ from cortexchange.models.surf_stop_model import load_checkpoint
 class Predictor(abc.ABC):
     model: torch.nn.Module
 
-    def __init__(self, model_name, device):
+    def __init__(self, model_name, device, *args, **kwargs):
         self.device = device
         downloader.download_model(model_name)
         checkpoint = load_checkpoint(downloader.get_path(model_name), self.device)
@@ -27,7 +27,7 @@ class Predictor(abc.ABC):
         ...
 
     @torch.no_grad()
-    def predict(self):
+    def predict(self, data: Any) -> Any:
         pass
 
     @staticmethod

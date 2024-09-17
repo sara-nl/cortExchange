@@ -1,3 +1,4 @@
+import argparse
 import functools
 
 import torch
@@ -11,7 +12,7 @@ setattr(__main__, "ImagenetTransferLearning", ImagenetTransferLearning)
 
 
 class StopPredictor(Predictor):
-    def __init__(self, model_name: str, device: str, variational_dropout: int = 0):
+    def __init__(self, model_name: str, device: str, *args, variational_dropout: int = 0, **kwargs):
         super().__init__(model_name, device)
 
         self.dtype = torch.float32
@@ -30,9 +31,7 @@ class StopPredictor(Predictor):
         return input_data
 
     @torch.no_grad()
-    def predict(self, input_path):
-        data = self.prepare_data(input_path)
-
+    def predict(self, data: torch.Tensor):
         with torch.autocast(dtype=self.dtype, device_type=self.device):
             if self.variational_dropout > 0:
                 self.model.feature_extractor.eval()
@@ -50,7 +49,7 @@ class StopPredictor(Predictor):
         return mean, std
 
     @staticmethod
-    def add_argparse_args(parser):
+    def add_argparse_args(parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--variational_dropout",
             type=int,

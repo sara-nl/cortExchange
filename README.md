@@ -1,4 +1,4 @@
-# Step by step for running a model
+# How to run a model
 
 ## Install through github automatically.
 
@@ -35,5 +35,31 @@ init_downloader(
 You can run prediction on the given model as follows:
 
 ```Python
-predictor.predict(input_path="/your/input/file.fits")
+data = predictor.prepare_data(input_path="/your/input/file.fits")
+predictor.predict(data)
 ```
+
+# Adding new models
+
+## Implement Predictor class
+
+We have a Predictor class which has the following two methods that need to be implemented:
+
+```
+def prepare_data(self, data: Any) -> torch.Tensor
+def predict(self, data: torch.Tensor) -> Any
+```
+
+The prepare data ideally takes a path from which files are read, which would then automatically allow for seamless
+integration with the cortexchange-cli tool.
+
+There are also some optional methods that can be implemented:
+
+```Python
+def add_argparse_args(parser: argparse.ArgumentParser) -> None
+def __init__(self, model_name: str, device: str, *args, your_additional_args=0, **kwargs)
+```
+
+Please ensure that your implementation of the `__init__` function can take an arbitrary amount of additional arguments.
+We pass all the arguments parsed by the argparser to the `__init__` function.
+Adding your model-specific argparser arguments should be done in the `add_argparse_args` method.

@@ -20,7 +20,7 @@ def create_argparse(predictor_class: type(Predictor) = None) -> argparse.Namespa
         default="version_7743995_4__model_resnext101_64x4d__lr_0.001__normalize_0__dropout_p_0.25__use_compile_1",
         help="Name of the model."
     )
-    parser.add_argument("--input", type=str, default=None, help="Path to the fits file.")
+    parser.add_argument("--input", type=str, default=None, help="Path to the input file.")
     parser.add_argument("--device", type=str, default="cpu", help="Device for inference, default=cpu.")
 
     parser.add_argument(
