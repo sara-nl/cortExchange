@@ -1,4 +1,5 @@
 import argparse
+import os
 
 from cortexchange.predictor import Predictor
 
@@ -13,9 +14,14 @@ def create_argparse(predictor_class: type(Predictor) = None) -> argparse.Namespa
         help="What model configuration to use. This is formatted as 'organization/model_name'."
     )
 
-    parser.add_argument("--cache", type=str, default="~/.cache/cortexchange", help="Where to store the downloaded model weights.")
     parser.add_argument(
-        "--model",
+        "--cache",
+        type=str,
+        default=f"{os.path.join(os.path.expanduser('~'), '.cache/cortexchange')}",
+        help="Where to store the downloaded model weights."
+    )
+    parser.add_argument(
+        "--model_name",
         type=str,
         default="version_7743995_4__model_resnext101_64x4d__lr_0.001__normalize_0__dropout_p_0.25__use_compile_1",
         help="Name of the model."

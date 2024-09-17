@@ -4,13 +4,16 @@ from typing import Any
 import torch
 
 from cortexchange.downloader import downloader
-from cortexchange.models.surf_stop_model import load_checkpoint
+from cortexchange.models.surf.stop_model import load_checkpoint
 
 
 class Predictor(abc.ABC):
     model: torch.nn.Module
 
     def __init__(self, model_name, device, *args, **kwargs):
+        assert model_name is not None, "Pass --model_name in the arguments list."
+        assert device is not None, "Pass --device in the arguments list."
+
         self.device = device
         downloader.download_model(model_name)
         checkpoint = load_checkpoint(downloader.get_path(model_name), self.device)

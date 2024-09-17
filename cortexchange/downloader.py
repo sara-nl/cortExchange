@@ -69,7 +69,7 @@ def init_downloader(
     url: str = "https://surfdrive.surf.nl/files/public.php/webdav/",
     login: str = "5lnKaoagQi92y0j",
     password: str = "1234",
-    cache: str = "~/.cache/cortexchange"
+    cache: str = os.path.expanduser("~/.cache/cortexchange")
 ):
     global downloader
     downloader = Downloader(url, login, password, cache)

@@ -2,17 +2,17 @@ import argparse
 import functools
 
 import torch
-
-from cortexchange.models.surf_stop_model import ImagenetTransferLearning, process_fits  # noqa
-from cortexchange.predictor import Predictor
-
 import __main__
+
+from cortexchange.models.surf.stop_model import ImagenetTransferLearning, process_fits  # noqa
+from cortexchange.predictor import Predictor
 
 setattr(__main__, "ImagenetTransferLearning", ImagenetTransferLearning)
 
 
 class StopPredictor(Predictor):
-    def __init__(self, model_name: str, device: str, *args, variational_dropout: int = 0, **kwargs):
+    def __init__(self, model_name: str = None, device: str = None, variational_dropout: int = 0, **kwargs):
+        print(kwargs)
         super().__init__(model_name, device)
 
         self.dtype = torch.float32
