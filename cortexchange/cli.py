@@ -39,6 +39,7 @@ def main():
         model_name=args.model,
         variational_dropout=args.variational_dropout
     )
+
     predictor.predict(input_path=args.input)
 
 
