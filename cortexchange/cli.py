@@ -38,7 +38,7 @@ def main():
     # Reinitialize args for specific predictor class.
     args = create_argparse(predictor)
 
-    init_downloader(*vars(args))
+    init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=args.cache)
 
     predictor = predictor(
         device=args.device,
