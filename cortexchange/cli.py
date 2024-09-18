@@ -4,16 +4,17 @@ import os
 import sys
 
 from cortexchange.wdclient import init_downloader, client
-from cortexchange.predictor import Predictor
-from cortexchange.utils import create_argparse, create_argparse_upload, create_argparse_group
+from cortexchange.architecture import Architecture
+from cortexchange.utils import create_argparse, create_argparse_upload, create_argparse_group, \
+    create_argparse_upload_arch
 
 
-def get_predictor_cls(model_type) -> type(Predictor):
-    if model_type is None:
+def get_architecture_cls(architecture_type) -> type(Architecture):
+    if architecture_type is None:
         logging.error(f"Please pass your model with `--model_architecture=group/model`.")
         return exit(1)
 
-    segments = model_type.split("/", 1)
+    segments = architecture_type.split("/", 1)
     if len(segments) == 1:
         logging.error(f"Invalid format: should be `--model_architecture=group/model`.")
         return exit(1)
@@ -23,14 +24,16 @@ def get_predictor_cls(model_type) -> type(Predictor):
         module_org = importlib.import_module(f"cortexchange.predictor.{org}")
         predictor_cls = getattr(module_org, name)
     except (ImportError, AttributeError):
+        client.download_architecture(architecture_type)
+
         logging.error(
-            f"No module found with name {model_type}. "
+            f"No module found with name {architecture_type}. "
             f"Pass a valid predictor module with `--model_architecture=group/model`."
         )
         return exit(1)
 
-    if not isinstance(predictor_cls, type(Predictor)):
-        logging.error(f"Model {model_type} is not implemented in this version of cortExchange.")
+    if not isinstance(predictor_cls, type(Architecture)):
+        logging.error(f"Model {architecture_type} is not implemented in this version of cortExchange.")
         return exit(1)
 
     return predictor_cls
@@ -39,19 +42,19 @@ def get_predictor_cls(model_type) -> type(Predictor):
 def run():
     args = create_argparse()
 
-    predictor_cls = get_predictor_cls(args.model_architecture)
+    architecture_cls = get_architecture_cls(args.model_architecture)
 
     # Reinitialize args for specific predictor class.
-    args = create_argparse(predictor_cls)
+    args = create_argparse(architecture_cls)
 
     init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=args.cache)
-    predictor = predictor_cls(**vars(args))
+    predictor = architecture_cls(**vars(args))
 
     data = predictor.prepare_data(args.input)
     predictor.predict(data)
 
 
-def upload():
+def upload_weights():
     args = create_argparse_upload()
 
     if not os.path.exists(args.weights):
@@ -66,15 +69,23 @@ def upload():
     if args.validate:
         init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=temp_cache_path)
 
-        predictor_cls = get_predictor_cls(args.model_architecture)
-        args = create_argparse(predictor_cls)
+        architecture_cls = get_architecture_cls(args.model_architecture)
+        args = create_argparse(architecture_cls)
 
         kwargs = vars(args)
         kwargs["model_name"] = model_name
 
-        predictor = predictor_cls(**kwargs)
+        architecture = architecture_cls(**kwargs)
 
-    client.upload_model(model_name, full_path_weights, force=args.force)
+    # Take the args name, or use the filename if none is given.
+    remote_model_name = args.model_name if args.model_name is not None else model_name
+
+    client.upload_model(remote_model_name, full_path_weights, force=args.force)
+
+
+def upload_architecture():
+    args = create_argparse_upload_arch()
+    client.upload_architecture(args.architecture_name, args.architecture_root_path, force=args.force)
 
 
 def create_group():
@@ -90,7 +101,8 @@ def list_group():
 def main():
     methods = {
         "run": run,
-        "upload": upload,
+        "upload-weights": upload_weights,
+        "upload-architecture": upload_architecture,
         "create-group": create_group,
         "list-group": list_group,
     }

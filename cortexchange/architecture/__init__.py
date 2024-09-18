@@ -4,10 +4,9 @@ from typing import Any
 import torch
 
 from cortexchange.wdclient import client
-from cortexchange.models.surf.stop_model import load_checkpoint
 
 
-class Predictor(abc.ABC):
+class Architecture(abc.ABC):
     model: torch.nn.Module
 
     def __init__(self, model_name, device, *args, **kwargs):
@@ -16,9 +15,13 @@ class Predictor(abc.ABC):
 
         self.device = device
         client.download_model(model_name)
-        checkpoint = load_checkpoint(client.get_path(model_name), self.device)
+        checkpoint = self.load_checkpoint(client.local_weights_path(model_name))
 
         self.model = checkpoint.get("model")
+
+    @abc.abstractmethod
+    def load_checkpoint(self, path):
+        pass
 
     @abc.abstractmethod
     def prepare_data(self, data: Any) -> torch.Tensor:
@@ -30,7 +33,7 @@ class Predictor(abc.ABC):
         ...
 
     @torch.no_grad()
-    def predict(self, data: Any) -> Any:
+    def predict(self, data: torch.Tensor) -> Any:
         pass
 
     @staticmethod

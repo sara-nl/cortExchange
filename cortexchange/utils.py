@@ -1,12 +1,12 @@
 import argparse
 import os
 
-from cortexchange.predictor import Predictor
+from cortexchange.architecture import Architecture
 
 
-def create_argparse(predictor_class: type(Predictor) = None) -> argparse.Namespace:
+def create_argparse(architecture_cls: type(Architecture) = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Default arguments for cortExchange models.", add_help=predictor_class is not None
+        description="Default arguments for cortExchange models.", add_help=architecture_cls is not None
     )
     parser.add_argument(
         "--model_architecture",
@@ -31,8 +31,8 @@ def create_argparse(predictor_class: type(Predictor) = None) -> argparse.Namespa
 
     _add_wd_args(parser)
 
-    if predictor_class is not None:
-        predictor_class.add_argparse_args(parser)
+    if architecture_cls is not None:
+        architecture_cls.add_argparse_args(parser)
         return parser.parse_args()
     else:
         return parser.parse_known_args()[0]
@@ -67,9 +67,34 @@ def create_argparse_upload() -> argparse.Namespace:
     parser.add_argument(
         "--model_name",
         type=str,
-        help="Name of the model."
+        help="Name of the model. In format group/model_name. Leaving this emtpy will use the filename instead."
     )
-    parser.add_argument("--group_name", type=str, help="Group name under which to upload the model.")
+
+    _add_wd_args(parser)
+    return parser.parse_args()
+
+
+def create_argparse_upload_arch() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Arguments for uploading new cortExchange models."
+    )
+    parser.add_argument(
+        "--architecture_name",
+        type=str,
+        help="Name for the architecture."
+    )
+    parser.add_argument(
+        "--architecture_root_path",
+        default=True,
+        type=bool,
+        help="Full path to the root of the architecture code."
+    )
+    parser.add_argument(
+        "--force",
+        default=False,
+        type=bool,
+        help="Force overwrite any remote models with the same name."
+    )
 
     _add_wd_args(parser)
     return parser.parse_args()
