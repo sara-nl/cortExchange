@@ -39,6 +39,7 @@ class WDClient:
         group, model = model_name.split("/")
 
         model_path = self.get_path(model)
+        print(model_path)
         if not force and os.path.exists(model_path):
             logging.info(f"Model already found at {model_path}")
             return

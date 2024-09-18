@@ -9,7 +9,7 @@ def create_argparse(predictor_class: type(Predictor) = None) -> argparse.Namespa
         description="Default arguments for cortExchange models.", add_help=predictor_class is not None
     )
     parser.add_argument(
-        "--model_configuration",
+        "--model_architecture",
         type=str,
         help="What model configuration to use. This is formatted as 'group/model_name'."
     )
@@ -23,7 +23,7 @@ def create_argparse(predictor_class: type(Predictor) = None) -> argparse.Namespa
     parser.add_argument(
         "--model_name",
         type=str,
-        default="version_7743995_4__model_resnext101_64x4d__lr_0.001__normalize_0__dropout_p_0.25__use_compile_1",
+        default="surf/version_7743995_4__model_resnext101_64x4d__lr_0.001__normalize_0__dropout_p_0.25__use_compile_1",
         help="Name of the model."
     )
     parser.add_argument("--input", type=str, default=None, help="Path to the input file.")
@@ -60,7 +60,7 @@ def create_argparse_upload() -> argparse.Namespace:
         help="Force overwrite any remote models with the same name."
     )
     parser.add_argument(
-        "--model_configuration",
+        "--model_architecture",
         type=str,
         help="The Predictor class to load."
     )

@@ -10,12 +10,12 @@ from cortexchange.utils import create_argparse, create_argparse_upload, create_a
 
 def get_predictor_cls(model_type) -> type(Predictor):
     if model_type is None:
-        logging.error(f"Please pass your model with `--model_configuration=group/model`.")
+        logging.error(f"Please pass your model with `--model_architecture=group/model`.")
         return exit(1)
 
     segments = model_type.split("/", 1)
     if len(segments) == 1:
-        logging.error(f"Invalid format: should be `--model_configuration=group/model`.")
+        logging.error(f"Invalid format: should be `--model_architecture=group/model`.")
         return exit(1)
 
     org, name = segments
@@ -25,7 +25,7 @@ def get_predictor_cls(model_type) -> type(Predictor):
     except (ImportError, AttributeError):
         logging.error(
             f"No module found with name {model_type}. "
-            f"Pass a valid predictor module with `--model_configuration=group/model`."
+            f"Pass a valid predictor module with `--model_architecture=group/model`."
         )
         return exit(1)
 
@@ -39,7 +39,7 @@ def get_predictor_cls(model_type) -> type(Predictor):
 def run():
     args = create_argparse()
 
-    predictor_cls = get_predictor_cls(args.model_configuration)
+    predictor_cls = get_predictor_cls(args.model_architecture)
 
     # Reinitialize args for specific predictor class.
     args = create_argparse(predictor_cls)
@@ -66,7 +66,7 @@ def upload():
     if args.validate:
         init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=temp_cache_path)
 
-        predictor_cls = get_predictor_cls(args.model_configuration)
+        predictor_cls = get_predictor_cls(args.model_architecture)
         args = create_argparse(predictor_cls)
 
         kwargs = vars(args)
