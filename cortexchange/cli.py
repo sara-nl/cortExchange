@@ -94,8 +94,8 @@ def main():
         "create-group": create_group,
         "list-group": list_group,
     }
-    if len(sys.argv) < 2:
-        logging.error(f"First argument mut be one of: {', '.join(methods.keys())}")
+    if len(sys.argv) < 2 or sys.argv[1] not in methods.keys():
+        logging.error(f"First argument must be one of: {', '.join(methods.keys())}")
         return exit(1)
 
     cmd = sys.argv.pop(1)
