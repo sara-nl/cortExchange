@@ -5,7 +5,7 @@ import tarfile
 import webdav3
 from tqdm import tqdm
 from webdav3.client import Client
-from webdav3.exceptions import RemoteResourceNotFound
+from webdav3.exceptions import RemoteResourceNotFound, ResponseErrorCode
 
 
 class WDClient:
@@ -84,7 +84,13 @@ class WDClient:
         tar.close()
 
         self.bar = None
-        self.client.upload(f"{group}/{tarred_file}", full_path_tar, progress=self.progress)
+        try:
+            self.client.upload(f"{group}/{tarred_file}", full_path_tar, progress=self.progress)
+        except ResponseErrorCode as e:
+            if e.code == 403:
+                raise ConnectionError("The given webdav credentials do not have write-rights.")
+            else:
+                raise e
         os.remove(full_path_tar)
 
     def create_group(self, group_name: str):
@@ -94,7 +100,13 @@ class WDClient:
         except RemoteResourceNotFound:
             pass
 
-        self.client.mkdir(group_name)
+        try:
+            self.client.mkdir(group_name)
+        except ResponseErrorCode as e:
+            if e.code == 403:
+                raise ConnectionError("The given webdav credentials do not have write-rights.")
+            else:
+                raise e
 
     def list_group(self, group_name: str):
         try:
