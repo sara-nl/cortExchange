@@ -12,7 +12,6 @@ setattr(__main__, "ImagenetTransferLearning", ImagenetTransferLearning)
 
 class StopPredictor(Predictor):
     def __init__(self, model_name: str = None, device: str = None, variational_dropout: int = 0, **kwargs):
-        print(kwargs)
         super().__init__(model_name, device)
 
         self.dtype = torch.float32

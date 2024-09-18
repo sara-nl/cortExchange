@@ -22,7 +22,7 @@ The model cache will be used to store the to-be-downloaded models. This will the
 runs of the program.
 
 ```Python
-from cortexchange.downloader import init_downloader
+from cortexchange.wdclient import init_downloader
 
 init_downloader(
     url="https://surfdrive.surf.nl/files/public.php/webdav/",

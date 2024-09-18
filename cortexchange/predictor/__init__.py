@@ -3,7 +3,7 @@ from typing import Any
 
 import torch
 
-from cortexchange.downloader import downloader
+from cortexchange.wdclient import client
 from cortexchange.models.surf.stop_model import load_checkpoint
 
 
@@ -15,8 +15,8 @@ class Predictor(abc.ABC):
         assert device is not None, "Pass --device in the arguments list."
 
         self.device = device
-        downloader.download_model(model_name)
-        checkpoint = load_checkpoint(downloader.get_path(model_name), self.device)
+        client.download_model(model_name)
+        checkpoint = load_checkpoint(client.get_path(model_name), self.device)
 
         self.model = checkpoint.get("model")
 
