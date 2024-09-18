@@ -84,7 +84,7 @@ def create_group():
 
 def list_group():
     args = create_argparse_group()
-    print(client.list_group(args.group_name))
+    print("\n".join(client.list_group(args.group_name)))
 
 
 def main():
