@@ -82,11 +82,17 @@ def create_group():
     client.create_group(args.group_name)
 
 
+def list_group():
+    args = create_argparse_group()
+    print(client.list_group(args.group_name))
+
+
 def main():
     methods = {
         "run": run,
         "upload": upload,
-        "create-group": create_group
+        "create-group": create_group,
+        "list-group": list_group,
     }
     if len(sys.argv) < 2:
         logging.error(f"First argument mut be one of: {', '.join(methods.keys())}")

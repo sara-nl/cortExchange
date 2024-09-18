@@ -90,6 +90,12 @@ class WDClient:
             raise ValueError("Group already exists with this name.")
         self.client.mkdir(group_name)
 
+    def list_group(self, group_name: str):
+        if not self.client.is_dir(group_name):
+            raise ValueError("No groups with this name exist.")
+        return self.client.list(group_name)
+
+
 
 def init_downloader(
     url: str = "https://surfdrive.surf.nl/files/public.php/webdav/",
