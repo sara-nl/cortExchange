@@ -38,27 +38,27 @@ class WDClient:
 
         group, model = model_name.split("/")
 
-        model_path = self.get_path(model)
-        print(model_path)
+        model_path = self.get_path(model_name)
         if not force and os.path.exists(model_path):
             logging.info(f"Model already found at {model_path}")
             return
 
-        tarred_file = f'{model}.tar.gz'
-        full_path_tar = os.path.join(self.cache, tarred_file)
+        tarred_file = f'{model_name}.tar.gz'
+        full_path_tar = self.get_path(tarred_file)
 
         files = self.client.list(group)
-        if tarred_file not in files:
+        if f'{model}.tar.gz' not in files:
             logging.error(f"Available files: {files}")
             raise ValueError("No file exists remotely with this name.")
 
-        os.makedirs(self.cache, exist_ok=True)
+        out_dir = f'{self.cache}/{group}'
+        os.makedirs(out_dir, exist_ok=True)
         self.bar = None
         self.client.download(tarred_file, full_path_tar, progress=self.progress)
 
         # Extract tar and remove original file.
         tar = tarfile.TarFile(full_path_tar)
-        tar.extractall(self.cache)
+        tar.extractall(out_dir)
         tar.close()
         os.remove(full_path_tar)
 
