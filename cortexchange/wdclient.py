@@ -89,10 +89,11 @@ class WDClient:
 
     def create_group(self, group_name: str):
         try:
-            if not self.client.is_dir(group_name):
-                raise ValueError("Given group is not a group but a model.")
+            if self.client.is_dir(group_name):
+                raise ValueError("Group with this name already exists.")
         except RemoteResourceNotFound:
-            raise ValueError("No groups with this name exist.")
+            pass
+
         self.client.mkdir(group_name)
 
     def list_group(self, group_name: str):
@@ -103,7 +104,6 @@ class WDClient:
             raise ValueError("No groups with this name exist.")
 
         return self.client.list(group_name)
-
 
 
 def init_downloader(
