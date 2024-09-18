@@ -3,11 +3,11 @@ import functools
 
 import torch
 
-from cortexchange.architecture import Architecture, load_checkpoint
-from cortexchange.architecture.surf.stop_predictor.stop_model import process_fits
+from cortexchange.architecture import Architecture
+from cortexchange.architecture.surf.StopPredictor.stop_model import process_fits, load_checkpoint
 import __main__
 
-from cortexchange.architecture.surf.stop_predictor.stop_model import ImagenetTransferLearning  # noqa
+from cortexchange.architecture.surf.StopPredictor.stop_model import ImagenetTransferLearning  # noqa
 
 setattr(__main__, "ImagenetTransferLearning", ImagenetTransferLearning)
 
@@ -24,8 +24,9 @@ class StopPredictor(Architecture):
         assert variational_dropout >= 0
         self.variational_dropout = variational_dropout
 
-    def load_checkpoint(self, path):
-        self.model, _, _ = load_checkpoint(path, self.device)
+    def load_checkpoint(self, path) -> torch.nn.Module:
+        model, _, _ = load_checkpoint(path, self.device).values()
+        return model
 
     @functools.lru_cache(maxsize=1)
     def prepare_data(self, input_path: str) -> torch.Tensor:

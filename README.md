@@ -13,7 +13,7 @@ pip install -e "git+https://github.com/sara-nl/cortExchange#egg=cortexchange"
 You can then initialize the predictor as follows:
 
 ```Python
-from cortexchange.architecture.surf.stop_predictor import StopPredictor
+from cortexchange.architecture.surf.StopPredictor import StopPredictor
 
 predictor = StopPredictor(device="cpu", model_name="name_of_the_model")
 ```

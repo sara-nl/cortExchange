@@ -126,7 +126,12 @@ def _add_wd_args(parser):
     parser.add_argument(
         "--wd-login",
         type=str,
-        default="5lnKaoagQi92y0j",
+        default=os.environ.get("WD_LOGIN", "5lnKaoagQi92y0j"),
         help="Name of the directory in which the models are stored in webdav."
     )
-    parser.add_argument("--wd-password", type=str, default="1234", help="Password for the webdav storage.")
+    parser.add_argument(
+        "--wd-password",
+        type=str,
+        default=os.environ.get("WD_PASSWORD", "1234"),
+        help="Password for the webdav storage."
+    )

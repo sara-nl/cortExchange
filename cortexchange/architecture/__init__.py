@@ -15,9 +15,7 @@ class Architecture(abc.ABC):
 
         self.device = device
         client.download_model(model_name)
-        checkpoint = self.load_checkpoint(client.local_weights_path(model_name))
-
-        self.model = checkpoint.get("model")
+        self.model = self.load_checkpoint(client.local_weights_path(model_name))
 
     @abc.abstractmethod
     def load_checkpoint(self, path):

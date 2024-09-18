@@ -2,6 +2,7 @@ import importlib
 import logging
 import os
 import sys
+from dotenv import load_dotenv
 
 from cortexchange.wdclient import init_downloader, client
 from cortexchange.architecture import Architecture
@@ -21,7 +22,7 @@ def get_architecture_cls(architecture_type) -> type(Architecture):
 
     org, name = segments
     try:
-        module_org = importlib.import_module(f"cortexchange.predictor.{org}")
+        module_org = importlib.import_module(f"cortexchange.architecture.{org}.{name}")
         predictor_cls = getattr(module_org, name)
     except (ImportError, AttributeError):
         client.download_architecture(architecture_type)
@@ -115,4 +116,5 @@ def main():
 
 
 if __name__ == "__main__":
+    load_dotenv()
     main()
