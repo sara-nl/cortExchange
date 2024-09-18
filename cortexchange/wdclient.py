@@ -2,8 +2,10 @@ import logging
 import os
 import tarfile
 
+import webdav3
 from tqdm import tqdm
 from webdav3.client import Client
+from webdav3.exceptions import RemoteResourceNotFound
 
 
 class WDClient:
@@ -86,13 +88,20 @@ class WDClient:
         os.remove(full_path_tar)
 
     def create_group(self, group_name: str):
-        if self.client.is_dir(group_name):
-            raise ValueError("Group already exists with this name.")
+        try:
+            if not self.client.is_dir(group_name):
+                raise ValueError("Given group is not a group but a model.")
+        except RemoteResourceNotFound:
+            raise ValueError("No groups with this name exist.")
         self.client.mkdir(group_name)
 
     def list_group(self, group_name: str):
-        if not self.client.is_dir(group_name):
+        try:
+            if not self.client.is_dir(group_name):
+                raise ValueError("Given group is not a group but a model.")
+        except RemoteResourceNotFound:
             raise ValueError("No groups with this name exist.")
+
         return self.client.list(group_name)
 
 
