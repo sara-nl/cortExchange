@@ -4,10 +4,10 @@ import functools
 import torch
 
 from cortexchange.architecture import Architecture
-from cortexchange.architecture.surf.StopPredictor.stop_model import process_fits, load_checkpoint
+from .stop_model import process_fits, load_checkpoint
 import __main__
 
-from cortexchange.architecture.surf.StopPredictor.stop_model import ImagenetTransferLearning  # noqa
+from .stop_model import ImagenetTransferLearning  # noqa
 
 setattr(__main__, "ImagenetTransferLearning", ImagenetTransferLearning)
 

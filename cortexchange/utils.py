@@ -15,12 +15,6 @@ def create_argparse(architecture_cls: type(Architecture) = None) -> argparse.Nam
     )
 
     parser.add_argument(
-        "--cache",
-        type=str,
-        default=f"{os.path.join(os.path.expanduser('~'), '.cache/cortexchange')}",
-        help="Where to store the downloaded model weights."
-    )
-    parser.add_argument(
         "--model_name",
         type=str,
         default="surf/version_7743995_4__model_resnext101_64x4d__lr_0.001__normalize_0__dropout_p_0.25__use_compile_1",
@@ -85,8 +79,7 @@ def create_argparse_upload_arch() -> argparse.Namespace:
     )
     parser.add_argument(
         "--architecture_root_path",
-        default=True,
-        type=bool,
+        type=str,
         help="Full path to the root of the architecture code."
     )
     parser.add_argument(
@@ -124,14 +117,20 @@ def _add_wd_args(parser):
         help="URL where webdav is available for the to-be-downloaded models."
     )
     parser.add_argument(
+        "--cache",
+        type=str,
+        default=f"{os.path.join(os.path.expanduser('~'), '.cache/cortexchange')}",
+        help="Where to store the downloaded model weights."
+    )
+    parser.add_argument(
         "--wd-login",
         type=str,
-        default=os.environ.get("WD_LOGIN", "5lnKaoagQi92y0j"),
+        default=os.getenv("WD_LOGIN", "5lnKaoagQi92y0j"),
         help="Name of the directory in which the models are stored in webdav."
     )
     parser.add_argument(
         "--wd-password",
         type=str,
-        default=os.environ.get("WD_PASSWORD", "1234"),
+        default=os.getenv("WD_PASSWORD", "1234"),
         help="Password for the webdav storage."
     )

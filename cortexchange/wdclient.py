@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import tarfile
 
 import webdav3
@@ -9,7 +10,15 @@ from webdav3.exceptions import RemoteResourceNotFound, ResponseErrorCode
 
 
 class WDClient:
+    options = {}
+    cache = ""
+    client = None
+    bar = None
+
     def __init__(self, url: str, login: str, password: str, cache: str):
+        self.initialize(url, login, password, cache)
+
+    def initialize(self, url: str, login: str, password: str, cache: str):
         self.options = {
             'webdav_hostname': url,
             'webdav_login': login,
@@ -17,13 +26,12 @@ class WDClient:
         }
         self.cache = cache
         self.client = Client(self.options)
-        self.bar = None
 
     def local_weights_path(self, model_name: str):
         return os.path.join(self.cache, "weights", model_name)
 
     def local_architecture_path(self, architecture_name: str):
-        return os.path.join(self.cache, "architecture", architecture_name)
+        return os.path.join(self.cache, "architectures", architecture_name)
 
     @staticmethod
     def remote_weights_path(model_name):
@@ -31,7 +39,7 @@ class WDClient:
 
     @staticmethod
     def remote_architecture_path(architecture_name):
-        return f"architecture/{architecture_name}"
+        return f"architectures/{architecture_name}"
 
     def progress(self, current, total):
         if self.bar is None:
@@ -65,7 +73,6 @@ class WDClient:
 
         files = self.client.list(self.remote_weights_path(group))
         if f'{model}.tar.gz' not in files:
-            logging.error(f"Available files: {files}")
             raise ValueError("No file exists remotely with this name.")
 
         os.makedirs(self.local_weights_path(group), exist_ok=True)
@@ -84,14 +91,13 @@ class WDClient:
 
         files = self.client.list(remote_path=self.remote_weights_path(group))
         if not force and tarred_file in files:
-            logging.error(f"Available files: {files}")
             raise ValueError("Model already exists remotely with this name.")
 
         full_path_tar = os.path.join(self.cache, tarred_file)
 
         # Create tar and upload
-        tar = tarfile.TarFile(full_path_tar)
-        tar.add(weights_path)
+        tar = tarfile.TarFile(full_path_tar, mode="w")
+        tar.add(weights_path, arcname=model)
         tar.close()
 
         self.bar = None
@@ -114,19 +120,18 @@ class WDClient:
 
         files = self.client.list(remote_path=self.remote_architecture_path(group))
         if not force and tarred_file in files:
-            logging.error(f"Available files: {files}")
             raise ValueError("Architecture already exists remotely with this name.")
 
         full_path_tar = os.path.join(self.cache, tarred_file)
 
         # Create tar and upload
-        tar = tarfile.TarFile(full_path_tar)
-        tar.add(architecture_root_path, recursive=True)
+        tar = tarfile.TarFile(full_path_tar, mode="w")
+        tar.add(architecture_root_path, arcname=architecture, recursive=True)
         tar.close()
 
         size_in_bytes = os.path.getsize(full_path_tar)
         if size_in_bytes > 1 * 1024 * 1024:  # 1MB max code size
-            logging.error(
+            raise ValueError(
                 f"Code size in directory exceeds 1MB. "
                 f"Please remove unnecessary (binary) files from the directory and try again."
             )
@@ -184,7 +189,6 @@ class WDClient:
 
         files = self.client.list(self.remote_architecture_path(group))
         if f'{model}.tar.gz' not in files:
-            logging.error(f"Available files: {files}")
             raise ValueError("No file exists remotely with this name.")
 
         os.makedirs(self.local_architecture_path(group), exist_ok=True)
@@ -205,8 +209,13 @@ def init_downloader(
     cache: str = os.path.expanduser("~/.cache/cortexchange")
 ):
     global client
-    client = WDClient(url, login, password, cache)
+    client.initialize(url, login, password, cache)
 
 
-client: WDClient
+client = WDClient(
+    "https://surfdrive.surf.nl/files/public.php/webdav/",
+    "5lnKaoagQi92y0j",
+    "1234",
+    os.path.expanduser("~/.cache/cortexchange")
+)
 init_downloader()

@@ -86,3 +86,14 @@ List existing models in a group with `list-group`. `run` will download and run a
 This can be used to pre-download models, and see if they run on the hardware you have available.
 The programmatical approach is better to use for integration with existing workflows, as then you can keep the model
 weights loaded between inference passes through the model.
+
+## Env variables
+
+You can create a `.env` file where you are running containing the following two variables which are used for authentication to webdav:
+
+```bash
+WD_LOGIN=code
+WD_PASSWORD=password
+```
+
+This will override the default read-only values. It has lower priority than values passed through the terminal.

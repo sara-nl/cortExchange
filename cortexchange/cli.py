@@ -1,7 +1,11 @@
 import importlib
 import logging
 import os
+import shutil
 import sys
+import traceback
+from typing import Optional
+
 from dotenv import load_dotenv
 
 from cortexchange.wdclient import init_downloader, client
@@ -12,32 +16,40 @@ from cortexchange.utils import create_argparse, create_argparse_upload, create_a
 
 def get_architecture_cls(architecture_type) -> type(Architecture):
     if architecture_type is None:
-        logging.error(f"Please pass your model with `--model_architecture=group/model`.")
-        return exit(1)
+        raise ValueError(f"Please pass your model with `--model_architecture=group/model`.")
 
     segments = architecture_type.split("/", 1)
     if len(segments) == 1:
-        logging.error(f"Invalid format: should be `--model_architecture=group/model`.")
-        return exit(1)
+        raise ValueError(f"Invalid format: should be `--model_architecture=group/model`.")
 
     org, name = segments
-    try:
-        module_org = importlib.import_module(f"cortexchange.architecture.{org}.{name}")
-        predictor_cls = getattr(module_org, name)
-    except (ImportError, AttributeError):
-        client.download_architecture(architecture_type)
 
-        logging.error(
+    def try_import(module_name) -> Optional[type(Architecture)]:
+        try:
+            # Attempt importing base-package model
+            module_org = importlib.import_module(module_name)
+            return getattr(module_org, name)
+        except (ImportError, AttributeError):
+            return None
+
+    architecture_cls = try_import(f"cortexchange.architecture.{org}.{name}")
+    if architecture_cls is None:
+        sys.path.append(client.local_architecture_path(""))
+        architecture_cls = try_import(f"{org}.{name}")
+    if architecture_cls is None:
+        client.download_architecture(architecture_type)
+        architecture_cls = try_import(client.local_architecture_path(architecture_type).replace("/", "."))
+
+    if architecture_cls is None:
+        raise ValueError(
             f"No module found with name {architecture_type}. "
             f"Pass a valid predictor module with `--model_architecture=group/model`."
         )
-        return exit(1)
 
-    if not isinstance(predictor_cls, type(Architecture)):
-        logging.error(f"Model {architecture_type} is not implemented in this version of cortExchange.")
-        return exit(1)
+    if not isinstance(architecture_cls, type(Architecture)):
+        raise ValueError(f"Model {architecture_type} is not implemented in this version of cortExchange.")
 
-    return predictor_cls
+    return architecture_cls
 
 
 def run():
@@ -57,10 +69,10 @@ def run():
 
 def upload_weights():
     args = create_argparse_upload()
+    init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=args.cache)
 
     if not os.path.exists(args.weights):
-        logging.error(f"No such path exists: {args.weights}.")
-        return exit(1)
+        raise ValueError(f"No such path exists: {args.weights}.")
 
     full_path_weights = os.path.abspath(args.weights)
     segments = full_path_weights.split("/")
@@ -86,16 +98,39 @@ def upload_weights():
 
 def upload_architecture():
     args = create_argparse_upload_arch()
-    client.upload_architecture(args.architecture_name, args.architecture_root_path, force=args.force)
+    init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=args.cache)
+
+    architecture_name = args.architecture_name
+
+    # First copy the architecture to cache to find out if it would work
+    temp_arch_path = client.local_architecture_path(architecture_name)
+    if os.path.exists(temp_arch_path):
+        raise ValueError("This architecture already exists locally. Pass --force to overwrite.")
+
+    print(args.architecture_root_path, client.local_architecture_path(architecture_name))
+
+    shutil.copytree(args.architecture_root_path, temp_arch_path)
+    try:
+        arch_cls = get_architecture_cls(architecture_type=architecture_name)
+        print(f"Model initialized correctly.")
+        client.upload_architecture(args.architecture_name, args.architecture_root_path, force=args.force)
+    except Exception as e:
+        print(traceback.format_exc())
+        pass  # Always remove temp files
+    shutil.rmtree(temp_arch_path)
+
+    # client.upload_architecture(args.architecture_name, args.architecture_root_path, force=args.force)
 
 
 def create_group():
     args = create_argparse_group()
+    init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=args.cache)
     client.create_group(args.group_name)
 
 
 def list_group():
     args = create_argparse_group()
+    init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=args.cache)
     print("\n".join(client.list_group(args.group_name)))
 
 
