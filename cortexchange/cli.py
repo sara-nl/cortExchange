@@ -131,7 +131,11 @@ def create_group():
 def list_group():
     args = create_argparse_group()
     init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=args.cache)
-    print("\n".join(client.list_group(args.group_name)))
+
+    print("\n## Architectures: ##")
+    print("\n".join(f"\t{x}" for x in client.list_group(args.group_name, list_weights=False)))
+    print("\n## Weights: ##")
+    print("\n".join(f"\t{x}" for x in client.list_group(args.group_name)))
 
 
 def main():

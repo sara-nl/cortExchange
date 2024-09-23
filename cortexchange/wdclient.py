@@ -161,14 +161,17 @@ class WDClient:
             else:
                 raise e
 
-    def list_group(self, group_name: str):
+    def list_group(self, group_name: str, list_weights=True):
         try:
             if not self.client.is_dir(self.remote_weights_path(group_name)):
                 raise ValueError("Given group is not a group but a model.")
         except RemoteResourceNotFound:
             raise ValueError("No groups with this name exist.")
 
-        return self.client.list(self.remote_weights_path(group_name))
+        if list_weights:
+            return self.client.list(self.remote_weights_path(group_name))
+        else:
+            return self.client.list(self.remote_architecture_path(group_name))
 
     def download_architecture(self, architecture_name, force=False):
         if self.cache is None:
