@@ -80,12 +80,15 @@ Adding your model-specific argparser arguments should be done in the `add_argpar
 
 # cortExchange CLI
 
-In the CLI we have a few tools: run, upload, list-group, and create-group.
+In the CLI we have a few tools: run, upload-weights, upload-architecture, list-group, and create-group.
 Upload new models with an existing architecture easily with the `upload` tool.
 List existing models in a group with `list-group`. `run` will download and run a single sample quickly.
 This can be used to pre-download models, and see if they run on the hardware you have available.
 The programmatical approach is better to use for integration with existing workflows, as then you can keep the model
 weights loaded between inference passes through the model.
+Uploading new architecture is possible temporarily through the CLI tool as well. This will zip the code and upload under
+the given name. For longer term support, please create a PR with your model architecture, as this will add versioning
+combined with the rest of the repository.
 
 ## Env variables
 
