@@ -113,7 +113,7 @@ def _add_wd_args(parser):
     parser.add_argument(
         "--wd-url",
         type=str,
-        default="https://surfdrive.surf.nl/files/public.php/webdav/",
+        default="https://researchdrive.surfsara.nl/public.php/webdav/",
         help="URL where webdav is available for the to-be-downloaded models."
     )
     parser.add_argument(
@@ -125,12 +125,12 @@ def _add_wd_args(parser):
     parser.add_argument(
         "--wd-login",
         type=str,
-        default=os.getenv("WD_LOGIN", "5lnKaoagQi92y0j"),
+        default=os.getenv("WD_LOGIN", "WsSxVZHPqHlKcvY"),
         help="Name of the directory in which the models are stored in webdav."
     )
     parser.add_argument(
         "--wd-password",
         type=str,
-        default=os.getenv("WD_PASSWORD", "1234"),
+        default=os.getenv("WD_PASSWORD", ""),
         help="Password for the webdav storage."
     )

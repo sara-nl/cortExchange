@@ -15,8 +15,8 @@ class WDClient:
     client = None
     bar = None
 
-    def __init__(self, url: str, login: str, password: str, cache: str):
-        self.initialize(url, login, password, cache)
+    ARCH_PREFIX = "architectures"
+    WEIGHT_PREFIX = "weights"
 
     def initialize(self, url: str, login: str, password: str, cache: str):
         self.options = {
@@ -26,6 +26,16 @@ class WDClient:
         }
         self.cache = cache
         self.client = Client(self.options)
+        try:
+            print("Attempting authorization")
+            self.client.list()
+        except webdav3.exceptions.WebDavException as e:
+            print(
+                "Authorization failed with:\n\t" + f"\n\t".join(
+                    f"{k}: {v if k != 'webdav_password' else '************'}" for k, v in self.options.items()
+                )
+            )
+            exit(1)
 
     def local_weights_path(self, model_name: str):
         return os.path.join(self.cache, "weights", model_name)
@@ -33,13 +43,11 @@ class WDClient:
     def local_architecture_path(self, architecture_name: str):
         return os.path.join(self.cache, "architectures", architecture_name)
 
-    @staticmethod
-    def remote_weights_path(model_name):
-        return f"weights/{model_name}"
+    def remote_weights_path(self, model_name):
+        return f"{self.WEIGHT_PREFIX}/{model_name}"
 
-    @staticmethod
-    def remote_architecture_path(architecture_name):
-        return f"architectures/{architecture_name}"
+    def remote_architecture_path(self, architecture_name):
+        return f"{self.ARCH_PREFIX}/{architecture_name}"
 
     def progress(self, current, total):
         if self.bar is None:
@@ -153,8 +161,10 @@ class WDClient:
 
     def create_group(self, group_name: str):
         try:
-            self.client.mkdir(self.remote_weights_path(group_name), recursive=True)
-            self.client.mkdir(self.remote_architecture_path(group_name), recursive=True)
+            self.client.mkdir("weights")
+            self.client.mkdir("architectures")
+            self.client.mkdir(self.remote_weights_path(group_name))
+            self.client.mkdir(self.remote_architecture_path(group_name))
         except ResponseErrorCode as e:
             if e.code == 403:
                 raise ConnectionError("The given webdav credentials do not have write-rights.")
@@ -206,19 +216,13 @@ class WDClient:
 
 
 def init_downloader(
-    url: str = "https://surfdrive.surf.nl/files/public.php/webdav/",
-    login: str = "5lnKaoagQi92y0j",
-    password: str = "1234",
-    cache: str = os.path.expanduser("~/.cache/cortexchange")
+    url: str,
+    login: str,
+    password: str,
+    cache: str
 ):
     global client
     client.initialize(url, login, password, cache)
 
 
-client = WDClient(
-    "https://surfdrive.surf.nl/files/public.php/webdav/",
-    "5lnKaoagQi92y0j",
-    "1234",
-    os.path.expanduser("~/.cache/cortexchange")
-)
-init_downloader()
+client = WDClient()
