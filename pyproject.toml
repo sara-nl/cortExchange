@@ -18,8 +18,5 @@ readme = "README.md"
 [project.scripts]
 cortexchange-cli = "cortexchange.cli:main"
 
-[tool.setuptools]
-packages = ["cortexchange"]
-
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}

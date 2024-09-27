@@ -1,1 +1,1 @@
-import architecture
+import cortexchange.architecture
