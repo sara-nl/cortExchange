@@ -4,6 +4,7 @@ import os
 import shutil
 import sys
 import traceback
+from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -34,11 +35,14 @@ def get_architecture_cls(architecture_type) -> type(Architecture):
 
     architecture_cls = try_import(f"cortexchange.architecture.{org}.{name}")
     if architecture_cls is None:
+        # Add cache to path and create init file for module import
         sys.path.append(client.local_architecture_path(""))
+        Path(client.local_architecture_path(f"{org}/__init__.py")).touch()
+
         architecture_cls = try_import(f"{org}.{name}")
     if architecture_cls is None:
         client.download_architecture(architecture_type)
-        architecture_cls = try_import(client.local_architecture_path(architecture_type).replace("/", "."))
+        architecture_cls = try_import(f"{org}.{name}")
 
     if architecture_cls is None:
         raise ValueError(
