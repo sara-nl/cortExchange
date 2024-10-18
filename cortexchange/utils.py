@@ -41,6 +41,13 @@ def create_argparse_upload() -> argparse.Namespace:
         type=str,
         help="Full path to weights, should be a *.pth file."
     )
+
+    parser.add_argument(
+        "--weights_name",
+        type=str,
+        help="Name of the model weights. In format group/model_name. Leaving this emtpy will use the filename instead."
+    )
+
     parser.add_argument(
         "--validate",
         default=True,
@@ -57,11 +64,6 @@ def create_argparse_upload() -> argparse.Namespace:
         "--model_architecture",
         type=str,
         help="The Architecture class to load."
-    )
-    parser.add_argument(
-        "--model_name",
-        type=str,
-        help="Name of the model. In format group/model_name. Leaving this emtpy will use the filename instead."
     )
 
     _add_wd_args(parser)

@@ -76,7 +76,6 @@ def run():
 
 def upload_weights():
     args = create_argparse_upload()
-    init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=args.cache)
 
     if not os.path.exists(args.weights):
         raise ValueError(f"No such path exists: {args.weights}.")
@@ -98,7 +97,8 @@ def upload_weights():
         architecture = architecture_cls(**kwargs)
 
     # Take the args name, or use the filename if none is given.
-    remote_model_name = args.model_name if args.model_name is not None else model_name
+    remote_model_name = args.weights_name if args.weights_name is not None else model_name
+    init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=args.cache)
 
     client.upload_model(remote_model_name, full_path_weights, force=args.force)
 
