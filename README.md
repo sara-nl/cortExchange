@@ -46,9 +46,9 @@ predictor.predict(data)
 You can add new models to the code through the CLI if it uses existing architecture, or create a PR following the below
 instructions.
 
-## Implement Predictor class
+## Implement Architecture class
 
-We have a Predictor class which has the following two methods that need to be implemented:
+We have a Architecture class which has the following two methods that need to be implemented:
 
 ```Python 
 def prepare_data(self, data: Any) -> torch.Tensor:
