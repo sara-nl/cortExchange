@@ -56,7 +56,7 @@ def create_argparse_upload() -> argparse.Namespace:
     parser.add_argument(
         "--model_architecture",
         type=str,
-        help="The Predictor class to load."
+        help="The Architecture class to load."
     )
     parser.add_argument(
         "--model_name",
