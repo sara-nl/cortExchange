@@ -4,6 +4,17 @@ import os
 from cortexchange.architecture import Architecture
 
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
 def create_argparse(architecture_cls: type(Architecture) = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Default arguments for cortExchange models.", add_help=architecture_cls is not None
@@ -51,13 +62,13 @@ def create_argparse_upload() -> argparse.Namespace:
     parser.add_argument(
         "--validate",
         default=True,
-        type=bool,
+        type=str2bool,
         help="Validate the model by loading it to memory before uploading."
     )
     parser.add_argument(
         "--force",
         default=False,
-        type=bool,
+        type=str2bool,
         help="Force overwrite any remote models with the same name."
     )
     parser.add_argument(
@@ -87,7 +98,7 @@ def create_argparse_upload_arch() -> argparse.Namespace:
     parser.add_argument(
         "--force",
         default=False,
-        type=bool,
+        type=str2bool,
         help="Force overwrite any remote models with the same name."
     )
 
