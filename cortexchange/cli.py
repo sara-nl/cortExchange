@@ -30,7 +30,9 @@ def get_architecture_cls(architecture_type) -> type(Architecture):
             # Attempt importing base-package model
             module_org = importlib.import_module(module_name)
             return getattr(module_org, name)
-        except (ImportError, AttributeError):
+        except (ImportError, AttributeError) as e:
+            logging.warning(f"Error while importing {module_name}")
+            traceback.print_exc()
             return None
 
     architecture_cls = try_import(f"cortexchange.architecture.{org}.{name}")
