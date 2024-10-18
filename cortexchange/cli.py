@@ -24,6 +24,7 @@ def get_architecture_cls(architecture_type) -> type(Architecture):
         raise ValueError(f"Invalid format: should be `--model_architecture=group/model`.")
 
     org, name = segments
+    os.makedirs(client.local_architecture_path(f"{org}"), exist_ok=True)
 
     def try_import(module_name) -> Optional[type(Architecture)]:
         try:
@@ -60,13 +61,13 @@ def get_architecture_cls(architecture_type) -> type(Architecture):
 
 def run():
     args = create_argparse()
+    init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=args.cache)
 
     architecture_cls = get_architecture_cls(args.model_architecture)
 
     # Reinitialize args for specific predictor class.
     args = create_argparse(architecture_cls)
 
-    init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=args.cache)
     predictor = architecture_cls(**vars(args))
 
     data = predictor.prepare_data(args.input)
