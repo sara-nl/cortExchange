@@ -76,7 +76,7 @@ def run():
 
 def upload_weights():
     args = create_argparse_upload()
-
+    print(args.__dict__)
     if not os.path.exists(args.weights):
         raise ValueError(f"No such path exists: {args.weights}.")
 
@@ -86,6 +86,7 @@ def upload_weights():
     temp_cache_path = "/".join(segments[:-2])
 
     if args.validate:
+        print("Validation")
         init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=temp_cache_path)
 
         architecture_cls = get_architecture_cls(args.model_architecture)
@@ -111,12 +112,12 @@ def upload_architecture():
 
     # First copy the architecture to cache to find out if it would work
     temp_arch_path = client.local_architecture_path(architecture_name)
-    if os.path.exists(temp_arch_path):
+    if os.path.exists(temp_arch_path) and not args.force:
         raise ValueError("This architecture already exists locally. Pass --force to overwrite.")
 
     print(args.architecture_root_path, client.local_architecture_path(architecture_name))
 
-    shutil.copytree(args.architecture_root_path, temp_arch_path)
+    shutil.copytree(args.architecture_root_path, temp_arch_path, dirs_exist_ok=True)
     try:
         arch_cls = get_architecture_cls(architecture_type=architecture_name)
         print(f"Model initialized correctly.")
