@@ -6,6 +6,9 @@ import sys
 import traceback
 from pathlib import Path
 from typing import Any, Optional
+from dotenv import load_dotenv
+
+load_dotenv()
 
 import torch
 
@@ -13,11 +16,12 @@ from cortexchange.wdclient import client, DefaultWebdavArgs
 
 # Init webdav client if not set by user specifically
 if client.client is None:
+
     client.initialize(
         DefaultWebdavArgs.URL,
         DefaultWebdavArgs.LOGIN,
         DefaultWebdavArgs.PASSWORD,
-        DefaultWebdavArgs.CACHE
+        DefaultWebdavArgs.CACHE,
     )
 
 
@@ -62,11 +66,15 @@ class Architecture(abc.ABC):
 
 def get_architecture(architecture_type) -> type(Architecture):
     if architecture_type is None:
-        raise ValueError(f"Please pass your model with `--model_architecture=group/model`.")
+        raise ValueError(
+            f"Please pass your model with `--model_architecture=group/model`."
+        )
 
     segments = architecture_type.split("/", 1)
     if len(segments) == 1:
-        raise ValueError(f"Invalid format: should be `--model_architecture=group/model`.")
+        raise ValueError(
+            f"Invalid format: should be `--model_architecture=group/model`."
+        )
 
     org, name = segments
     os.makedirs(client.local_architecture_path(f"{org}"), exist_ok=True)
@@ -99,6 +107,8 @@ def get_architecture(architecture_type) -> type(Architecture):
         )
 
     if not isinstance(architecture_cls, type(Architecture)):
-        raise ValueError(f"Model {architecture_type} is not implemented in this version of cortExchange.")
+        raise ValueError(
+            f"Model {architecture_type} is not implemented in this version of cortExchange."
+        )
 
     return architecture_cls
