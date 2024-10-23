@@ -12,6 +12,7 @@ authors = [
   {name = "Jurjen de Jong", email = "jurjendejong@strw.leidenuniv.nl" },
   {name = "Duncan Kampert", email = "duncan.kampert@surf.nl" },
   {name = "Robert Jan Schlimbach", email = "robert-jan.schlimbach@surf.nl" },
+  {name = "Lars Veefkind", email = "lars.veefkind@surf.nl"}
 ]
 readme = "README.md"
 
