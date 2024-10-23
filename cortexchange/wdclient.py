@@ -226,3 +226,10 @@ def init_downloader(
 
 
 client = WDClient()
+
+
+class DefaultWebdavArgs:
+    URL = "https://researchdrive.surfsara.nl/public.php/webdav/"
+    CACHE = f"{os.path.join(os.path.expanduser('~'), '.cache/cortexchange')}"
+    LOGIN = os.getenv("WD_LOGIN", "WsSxVZHPqHlKcvY")
+    PASSWORD = os.getenv("WD_PASSWORD", "")

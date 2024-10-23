@@ -1,7 +1,7 @@
 import argparse
-import os
 
 from cortexchange.architecture import Architecture
+from cortexchange.wdclient import DefaultWebdavArgs
 
 
 def str2bool(v):
@@ -126,24 +126,24 @@ def _add_wd_args(parser):
     parser.add_argument(
         "--wd-url",
         type=str,
-        default="https://researchdrive.surfsara.nl/public.php/webdav/",
+        default=DefaultWebdavArgs.URL,
         help="URL where webdav is available for the to-be-downloaded models."
     )
     parser.add_argument(
         "--cache",
         type=str,
-        default=f"{os.path.join(os.path.expanduser('~'), '.cache/cortexchange')}",
+        default=DefaultWebdavArgs.CACHE,
         help="Where to store the downloaded model weights."
     )
     parser.add_argument(
         "--wd-login",
         type=str,
-        default=os.getenv("WD_LOGIN", "WsSxVZHPqHlKcvY"),
+        default=DefaultWebdavArgs.LOGIN,
         help="Name of the directory in which the models are stored in webdav."
     )
     parser.add_argument(
         "--wd-password",
         type=str,
-        default=os.getenv("WD_PASSWORD", ""),
+        default=DefaultWebdavArgs.PASSWORD,
         help="Password for the webdav storage."
     )
