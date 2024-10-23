@@ -16,7 +16,6 @@ from cortexchange.wdclient import client, DefaultWebdavArgs
 
 # Init webdav client if not set by user specifically
 if client.client is None:
-
     client.initialize(
         DefaultWebdavArgs.URL,
         DefaultWebdavArgs.LOGIN,
