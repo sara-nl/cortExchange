@@ -91,8 +91,8 @@ class TransferLearning(Architecture):
                 dim=1,
             )
 
-            mean = predictions.mean()
-            std = predictions.std()
+            mean = predictions.mean(dim=1)
+            std = predictions.std(dim=1)
 
         print(mean, std)
         return mean, std
