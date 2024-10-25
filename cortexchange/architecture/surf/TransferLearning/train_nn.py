@@ -488,6 +488,8 @@ def main(
             "dropout_p": dropout_p,
             "model_name": model_name,
             "flip_augmentations": flip_augmentations,
+            "dataset_mean": mean,
+            "dataset_std": std,
         },
     )
 

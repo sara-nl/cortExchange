@@ -9,7 +9,11 @@ from cortexchange.architecture import Architecture
 import __main__
 from astropy.io import fits
 
-from .train_nn import ImagenetTransferLearning, load_checkpoint  # noqa
+from .train_nn import (
+    ImagenetTransferLearning,
+    load_checkpoint,
+    normalize_inputs,
+)  # noqa
 from .pre_processing_for_ml import normalize_fits
 
 setattr(__main__, "ImagenetTransferLearning", ImagenetTransferLearning)
@@ -47,10 +51,10 @@ class TransferLearning(Architecture):
         (
             model,
             _,
-            args,
+            self.args,
         ) = load_checkpoint(path, self.device).values()
-        self.resize = args["resize"]
-        self.lift = args["lift"]
+        self.resize = self.args["resize"]
+        self.lift = self.args["lift"]
         return model
 
     @functools.lru_cache(maxsize=1)
@@ -58,12 +62,16 @@ class TransferLearning(Architecture):
         input_data: torch.Tensor = torch.from_numpy(process_fits(input_path))
         input_data = input_data.to(self.dtype)
         input_data = input_data.swapdims(0, 2).unsqueeze(0)
+        return self.prepare_batch(input_data)
+
+    def prepare_batch(self, batch: torch.Tensor) -> torch.Tensor:
+        batch = batch.to(self.dtype).to(self.device)
         if self.resize != 0:
-            input_data = interpolate(
-                input_data, size=self.resize, mode="bilinear", align_corners=False
+            batch = interpolate(
+                batch, size=self.resize, mode="bilinear", ailign_corners=False
             )
-        input_data = input_data.to(self.device)
-        return input_data
+        batch = normalize_inputs(batch, self.mean, self.std, normalize=1)
+        return batch
 
     @torch.no_grad()
     def predict(self, data: torch.Tensor):
