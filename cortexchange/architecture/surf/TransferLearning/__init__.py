@@ -68,7 +68,7 @@ class TransferLearning(Architecture):
         batch = batch.to(self.dtype).to(self.device)
         if self.resize != 0:
             batch = interpolate(
-                batch, size=self.resize, mode="bilinear", ailign_corners=False
+                batch, size=self.resize, mode="bilinear", align_corners=False
             )
         if mean is None:
             mean = self.mean
