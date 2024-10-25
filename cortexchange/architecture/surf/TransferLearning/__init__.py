@@ -64,13 +64,17 @@ class TransferLearning(Architecture):
         input_data = input_data.swapdims(0, 2).unsqueeze(0)
         return self.prepare_batch(input_data)
 
-    def prepare_batch(self, batch: torch.Tensor) -> torch.Tensor:
+    def prepare_batch(self, batch: torch.Tensor, mean=None, std=None) -> torch.Tensor:
         batch = batch.to(self.dtype).to(self.device)
         if self.resize != 0:
             batch = interpolate(
                 batch, size=self.resize, mode="bilinear", ailign_corners=False
             )
-        batch = normalize_inputs(batch, self.mean, self.std, normalize=1)
+        if mean is None:
+            mean = self.mean
+        if std is None:
+            std = self.std
+        batch = normalize_inputs(batch, mean, std, normalize=1)
         return batch
 
     @torch.no_grad()
