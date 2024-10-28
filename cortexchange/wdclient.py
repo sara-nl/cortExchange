@@ -35,7 +35,7 @@ class WDClient:
                     f"{k}: {v if k != 'webdav_password' else '************'}" for k, v in self.options.items()
                 )
             )
-            sys.exit(1)
+            sys.exit()
 
     def local_weights_path(self, model_name: str):
         return os.path.join(self.cache, "weights", model_name)

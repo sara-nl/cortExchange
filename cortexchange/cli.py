@@ -110,7 +110,7 @@ def main():
     }
     if len(sys.argv) < 2 or sys.argv[1] not in methods.keys():
         logging.error(f"First argument must be one of: {', '.join(methods.keys())}")
-        return sys.exit(1)
+        return sys.exit()
 
     cmd = sys.argv.pop(1)
     methods[cmd]()
