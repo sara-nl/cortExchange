@@ -5,7 +5,7 @@ import os
 import sys
 import traceback
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -78,28 +78,31 @@ def get_architecture(architecture_type) -> type(Architecture):
     org, name = segments
     os.makedirs(client.local_architecture_path(f"{org}"), exist_ok=True)
 
-    def try_import(module_name) -> Optional[type(Architecture)]:
+    def try_import(module_name) -> Tuple[type(Architecture), str]:
         try:
             # Attempt importing base-package model
             module_org = importlib.import_module(module_name)
-            return getattr(module_org, name)
+            return getattr(module_org, name), ""
         except (ImportError, AttributeError) as e:
             logging.warning(f"Error while importing {module_name}")
-            traceback.print_exc()
-            return None
+            return None, traceback.format_exc()
 
-    architecture_cls = try_import(f"cortexchange.architecture.{org}.{name}")
+    error1 = error2 = error3 = ""
+    architecture_cls, error1 = try_import(f"cortexchange.architecture.{org}.{name}")
     if architecture_cls is None:
         # Add cache to path and create init file for module import
         sys.path.append(client.local_architecture_path(""))
         Path(client.local_architecture_path(f"{org}/__init__.py")).touch()
 
-        architecture_cls = try_import(f"{org}.{name}")
+        architecture_cls, error2 = try_import(f"{org}.{name}")
     if architecture_cls is None:
         client.download_architecture(architecture_type)
-        architecture_cls = try_import(f"{org}.{name}")
+        architecture_cls, error3 = try_import(f"{org}.{name}")
 
     if architecture_cls is None:
+        logging.error(
+            f"While attempting to import your model, the following exceptions occurred: {error1}\n{error2}\n{error3}"
+        )
         raise ValueError(
             f"No module found with name {architecture_type}. "
             f"Pass a valid predictor module with `--model_architecture=group/model`."
