@@ -20,9 +20,9 @@ class WDClient:
 
     def initialize(self, url: str, login: str, password: str, cache: str):
         self.options = {
-            'webdav_hostname': url,
-            'webdav_login': login,
-            'webdav_password': password
+            "webdav_hostname": url,
+            "webdav_login": login,
+            "webdav_password": password,
         }
         self.cache = cache
         self.client = Client(self.options)
@@ -31,8 +31,10 @@ class WDClient:
             self.client.list()
         except webdav3.exceptions.WebDavException as e:
             print(
-                "Authorization failed with:\n\t" + f"\n\t".join(
-                    f"{k}: {v if k != 'webdav_password' else '************'}" for k, v in self.options.items()
+                "Authorization failed with:\n\t"
+                + f"\n\t".join(
+                    f"{k}: {v if k != 'webdav_password' else '************'}"
+                    for k, v in self.options.items()
                 )
             )
             sys.exit()
@@ -76,16 +78,18 @@ class WDClient:
             logging.info(f"Model already found at {model_path}")
             return
 
-        tarred_file = f'{model_name}.tar.gz'
+        tarred_file = f"{model_name}.tar.gz"
         full_path_tar = self.local_weights_path(tarred_file)
 
         files = self.client.list(self.remote_weights_path(group))
-        if f'{model}.tar.gz' not in files:
+        if f"{model}.tar.gz" not in files:
             raise ValueError("No file exists remotely with this name.")
 
         os.makedirs(self.local_weights_path(group), exist_ok=True)
         self.bar = None
-        self.client.download(self.remote_weights_path(tarred_file), full_path_tar, progress=self.progress)
+        self.client.download(
+            self.remote_weights_path(tarred_file), full_path_tar, progress=self.progress
+        )
 
         # Extract tar and remove original file.
         tar = tarfile.TarFile(full_path_tar)
@@ -95,7 +99,7 @@ class WDClient:
 
     def upload_model(self, model_name, weights_path, force=False):
         group, model = model_name.split("/")
-        tarred_file = f'{model}.tar.gz'
+        tarred_file = f"{model}.tar.gz"
 
         files = self.client.list(remote_path=self.remote_weights_path(group))
         if not force and tarred_file in files:
@@ -113,18 +117,22 @@ class WDClient:
             self.client.upload(
                 remote_path=self.remote_weights_path(f"{group}/{tarred_file}"),
                 local_path=full_path_tar,
-                progress=self.progress
+                progress=self.progress,
             )
         except ResponseErrorCode as e:
             if e.code == 403:
-                raise ConnectionError("The given webdav credentials do not have write-rights.")
+                raise ConnectionError(
+                    "The given webdav credentials do not have write-rights."
+                )
             else:
                 raise e
         os.remove(full_path_tar)
 
-    def upload_architecture(self, architecture_name, architecture_root_path, force=False):
+    def upload_architecture(
+        self, architecture_name, architecture_root_path, force=False
+    ):
         group, architecture = architecture_name.split("/")
-        tarred_file = f'{architecture}.tar.gz'
+        tarred_file = f"{architecture}.tar.gz"
 
         files = self.client.list(remote_path=self.remote_architecture_path(group))
         if not force and tarred_file in files:
@@ -138,9 +146,10 @@ class WDClient:
         tar.close()
 
         size_in_bytes = os.path.getsize(full_path_tar)
-        if size_in_bytes > 1 * 1024 * 1024:  # 1MB max code size
+        mb_size_limit = 2
+        if size_in_bytes > mb_size_limit * 1024 * 1024:  # 1MB max code size
             raise ValueError(
-                f"Code size in directory exceeds 1MB. "
+                f"Code size in directory exceeds {mb_size_limit}MB. "
                 f"Please remove unnecessary (binary) files from the directory and try again."
             )
         else:
@@ -149,11 +158,13 @@ class WDClient:
                 self.client.upload(
                     remote_path=self.remote_architecture_path(f"{group}/{tarred_file}"),
                     local_path=full_path_tar,
-                    progress=self.progress
+                    progress=self.progress,
                 )
             except ResponseErrorCode as e:
                 if e.code == 403:
-                    raise ConnectionError("The given webdav credentials do not have write-rights.")
+                    raise ConnectionError(
+                        "The given webdav credentials do not have write-rights."
+                    )
                 else:
                     raise e
 
@@ -167,7 +178,9 @@ class WDClient:
             self.client.mkdir(self.remote_architecture_path(group_name))
         except ResponseErrorCode as e:
             if e.code == 403:
-                raise ConnectionError("The given webdav credentials do not have write-rights.")
+                raise ConnectionError(
+                    "The given webdav credentials do not have write-rights."
+                )
             else:
                 raise e
 
@@ -197,16 +210,20 @@ class WDClient:
             logging.info(f"Architecture already found at {architecture_path}")
             return
 
-        tarred_file = f'{architecture_name}.tar.gz'
+        tarred_file = f"{architecture_name}.tar.gz"
         local_path_tar = self.local_architecture_path(tarred_file)
 
         files = self.client.list(self.remote_architecture_path(group))
-        if f'{model}.tar.gz' not in files:
+        if f"{model}.tar.gz" not in files:
             raise ValueError("No file exists remotely with this name.")
 
         os.makedirs(self.local_architecture_path(group), exist_ok=True)
         self.bar = None
-        self.client.download(self.remote_architecture_path(tarred_file), local_path_tar, progress=self.progress)
+        self.client.download(
+            self.remote_architecture_path(tarred_file),
+            local_path_tar,
+            progress=self.progress,
+        )
 
         # Extract tar and remove original file.
         tar = tarfile.TarFile(local_path_tar)
@@ -215,12 +232,7 @@ class WDClient:
         os.remove(local_path_tar)
 
 
-def init_downloader(
-    url: str,
-    login: str,
-    password: str,
-    cache: str
-):
+def init_downloader(url: str, login: str, password: str, cache: str):
     global client
     client.initialize(url, login, password, cache)
 
