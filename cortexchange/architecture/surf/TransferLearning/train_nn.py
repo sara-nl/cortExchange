@@ -22,6 +22,7 @@ import random
 from .pre_processing_for_ml import FitsDataset
 from .dino_model import DINOV2FeatureExtractor
 
+
 PROFILE = False
 SEED = None
 
@@ -136,8 +137,8 @@ def normalize_inputs(inputs, means, stds, normalize=1):
 
 
 @torch.no_grad()
-def augmentation(inputs, flip_augmentations=False):
-    inputs = get_transforms(flip_augmentations=flip_augmentations)(inputs)
+def augmentation(inputs):
+    inputs = get_transforms()(inputs)
     inputs = inputs + 0.01 * torch.randn_like(inputs)
 
     return inputs
@@ -153,7 +154,7 @@ class ImagenetTransferLearning(nn.Module):
         use_lora: bool = False,
         alpha: float = 16.0,
         rank: int = 16,
-        pos_embed: bool = False,
+        pos_embed: str = "pre-trained",
     ):
         super().__init__()
 
@@ -197,6 +198,10 @@ class ImagenetTransferLearning(nn.Module):
             if "zeros" in self.kwargs["pos_embed"]:
                 self.dino.encoder.pos_embed[:, 1:, :] = torch.zeros_like(
                     self.dino.encoder.pos_embed[:, 1:, :]
+                )
+            elif "single-vector" in self.kwargs["pos_embed"]:
+                self.dino.encoder.pos_embed = SharedPosEmbed(
+                    self.dino.encoder.pos_embed
                 )
             self.dino.encoder.pos_embed.requires_grad = (
                 True if "fine-tune" in self.kwargs["pos_embed"] else False
@@ -394,7 +399,6 @@ def main(
     alpha: float = 16,
     log_path: Path = "runs",
     epochs: int = 120,
-    flip_augmentations: bool = False,
     pos_embed: str = "pre-trained",
 ):
     torch.set_float32_matmul_precision("high")
@@ -429,7 +433,6 @@ def main(
         rank=rank,
         alpha=alpha,
         lift=lift,
-        flip_augmentations=flip_augmentations,
         pos_embed=pos_embed,
     )
 
@@ -489,7 +492,6 @@ def main(
             stochastic=stochastic_smoothing,
             smoothing_factor=label_smoothing,
         ),
-        augmentation_fn=partial(augmentation, flip_augmentations=flip_augmentations),
     )
     val_step_f = partial(val_step_f, val_dataloader=val_dataloader)
 
@@ -512,7 +514,6 @@ def main(
             "lr": lr,
             "dropout_p": dropout_p,
             "model_name": model_name,
-            "flip_augmentations": flip_augmentations,
             "dataset_mean": mean,
             "dataset_std": std,
         },
@@ -633,7 +634,6 @@ def train_step(
     logging_interval,
     metrics_logger,
     smoothing_fn,
-    augmentation_fn,
 ):
     # print("training")
     model.train()
@@ -644,7 +644,7 @@ def train_step(
         global_step += 1
         data, labels = prepare_data_f(data, labels)
         smoothed_label = smoothing_fn(labels)
-        data = augmentation_fn(data)
+        data = augmentation(data)
 
         optimizer.zero_grad(set_to_none=True)
         with torch.autocast("cuda", dtype=torch.bfloat16):
@@ -720,15 +720,11 @@ class Rotate90Transform:
 
 
 @lru_cache(maxsize=1)
-def get_transforms(flip_augmentations=False):
+def get_transforms():
 
     return v2.Compose(
         [
-            (
-                Rotate90Transform()
-                if not flip_augmentations
-                else v2.RandomVerticalFlip(p=0.5)
-            ),
+            (Rotate90Transform()),
             v2.RandomHorizontalFlip(p=0.5),
         ]
     )
@@ -903,7 +899,13 @@ def get_argparser():
         "--pos_embed",
         type=str,
         default="pre-trained",
-        choices=["pre-trained", "fine-tune", "zeros", "zeros-fine-tune"],
+        choices=[
+            "pre-trained",
+            "fine-tune",
+            "zeros",
+            "zeros-fine-tune",
+            # "fine-tune-single-vector",
+        ],
         help="How to handle positional embeddings",
     )
 
@@ -914,12 +916,6 @@ def get_argparser():
         type=float,
         default=None,
         help="LoRA alpha scaling. Defaults to rank value if not set",
-    )
-
-    parser.add_argument(
-        "--flip_augmentations",
-        action="store_true",
-        help="Uses double flip augmentations instead of rotate + flip",
     )
 
     parser.add_argument("--log_path", type=str, default="runs")

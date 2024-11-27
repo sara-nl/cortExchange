@@ -84,6 +84,7 @@ def get_architecture(architecture_type) -> type(Architecture):
             module_org = importlib.import_module(module_name)
             return getattr(module_org, name), ""
         except (ImportError, AttributeError) as e:
+            print(e)
             logging.warning(f"Error while importing {module_name}")
             return None, traceback.format_exc()
 
