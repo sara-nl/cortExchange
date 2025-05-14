@@ -24,7 +24,7 @@ def process_fits(fits_path):
     return normalize_fits(image_data)
 
 
-class TransferLearning(Architecture):
+class TransferLearningV2(Architecture):
     def __init__(
         self,
         model_name: str = None,
