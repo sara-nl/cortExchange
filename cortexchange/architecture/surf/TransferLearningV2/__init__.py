@@ -60,11 +60,11 @@ class TransferLearningV2(Architecture):
         return model
 
     @functools.lru_cache(maxsize=1)
-    def prepare_data(self, input_path: str) -> torch.Tensor:
+    def prepare_data(self, input_path: str, **kwargs) -> torch.Tensor:
         input_data: torch.Tensor = torch.from_numpy(process_fits(input_path))
         input_data = input_data.to(self.dtype)
         input_data = input_data.swapdims(0, 2).unsqueeze(0)
-        return self.prepare_batch(input_data)
+        return self.prepare_batch(input_data, **kwargs)
 
     def prepare_batch(
         self, batch: torch.Tensor, mean=None, std=None, resize=None
