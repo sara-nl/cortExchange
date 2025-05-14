@@ -72,7 +72,7 @@ class TransferLearning(Architecture):
             resize = self.resize
         if resize != 0:
             batch = interpolate(
-                batch, size=self.resize, mode="bilinear", align_corners=False
+                batch, size=resize, mode="bilinear", align_corners=False
             )
         if mean is None:
             mean = self.args["dataset_mean"]
