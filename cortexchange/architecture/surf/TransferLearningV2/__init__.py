@@ -74,7 +74,10 @@ class TransferLearningV2(Architecture):
             if self.resize is not None:
                 resize = self.resize
             else:
-                resize = getattr(self.config.data_transforms, "resize_val", resize)
+                resize = getattr(self.config, "data_transforms", {}).get(
+                    "resize_val", resize
+                )
+
         batch = self.resize_batch(batch, resize)
 
         if mean is None:
