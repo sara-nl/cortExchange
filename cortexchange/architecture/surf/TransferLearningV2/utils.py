@@ -9,7 +9,11 @@ import numpy as np
 from torch.nn.functional import interpolate
 import torcheval.metrics.functional as tef
 import random
-import wandb
+
+try:
+    import wandb
+except ImportError:
+    pass
 from sklearn.metrics import PrecisionRecallDisplay
 import matplotlib.pyplot as plt
 
