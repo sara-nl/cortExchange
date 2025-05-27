@@ -101,3 +101,8 @@ WD_PASSWORD=password
 ```
 
 This will override the default read-only values. It has lower priority than values passed through the terminal.
+
+
+
+# Acknowledgments
+This repository is part of the project CORTEX (NWA.1160.18.316) of the research programme NWA-ORC which is (partly) financed by the Dutch Research Council (NWO). 
