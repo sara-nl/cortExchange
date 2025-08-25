@@ -14,6 +14,7 @@ class WDClient:
     cache = ""
     client = None
     bar = None
+    initialized=False
 
     ARCH_PREFIX = "architectures"
     WEIGHT_PREFIX = "weights"
@@ -29,6 +30,7 @@ class WDClient:
         try:
             print("Attempting authorization")
             self.client.list()
+            self.initialized=True
         except webdav3.exceptions.WebDavException as e:
             print(
                 "Authorization failed with:\n\t"
@@ -37,7 +39,7 @@ class WDClient:
                     for k, v in self.options.items()
                 )
             )
-            sys.exit()
+            logging.warning(" Authentication NOT succesfull. Continuing without initialization. Attempting to use local cache. Some features may not work.")
 
     def local_weights_path(self, model_name: str):
         return os.path.join(self.cache, "weights", model_name)
