@@ -11,5 +11,4 @@ python-dotenv>=1.0.0
 numpy<=2.0.0
 xformers
 tensorboard
-dino-finetune @ git+https://github.com/sara-nl/dinov2-finetune.git
 scikit-learn
