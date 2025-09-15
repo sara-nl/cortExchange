@@ -39,6 +39,7 @@ class WDClient:
                     for k, v in self.options.items()
                 )
             )
+            logging.warning(f" Encountered error during authentication: {e}")
             logging.warning(" Authentication NOT succesfull. Continuing without initialization. Attempting to use local cache. Some features may not work.")
 
     def local_weights_path(self, model_name: str):
@@ -79,9 +80,14 @@ class WDClient:
         if not force and os.path.exists(model_path):
             logging.info(f"Model already found at {model_path}")
             return
+        
+        logging.info(f"Model not found locally, downloading {model_name} from remote.")
 
         tarred_file = f"{model_name}.tar.gz"
         full_path_tar = self.local_weights_path(tarred_file)
+
+        if not self.initialized:
+            raise ConnectionError("WDClient not initialized. Cannot download model.")
 
         files = self.client.list(self.remote_weights_path(group))
         if f"{model}.tar.gz" not in files:
