@@ -28,7 +28,7 @@ runs of the program.
 from cortexchange.wdclient import init_downloader
 
 init_downloader(
-    url="https://surfdrive.surf.nl/files/public.php/webdav/",
+    url="https://researchdrive.surfsara.nl/public.php/webdav/",
     login="webdavlogin",
     password="password",
     cache="/your/new/cache/path/.cache"
