@@ -4,10 +4,10 @@ import sys
 import tarfile
 
 import webdav3
+import traceback
 from tqdm import tqdm
 from webdav3.client import Client
 from webdav3.exceptions import RemoteResourceNotFound, ResponseErrorCode
-
 
 class WDClient:
     options = {}
@@ -31,7 +31,7 @@ class WDClient:
             print("Attempting authorization")
             self.client.list()
             self.initialized=True
-        except webdav3.exceptions.WebDavException as e:
+        except Exception as e:
             print(
                 "Authorization failed with:\n\t"
                 + f"\n\t".join(
@@ -39,8 +39,10 @@ class WDClient:
                     for k, v in self.options.items()
                 )
             )
-            logging.warning(f" Encountered error during authentication: {e}")
-            logging.warning(" Authentication NOT succesfull. Continuing without initialization. Attempting to use local cache. Some features may not work.")
+
+            logging.warning(f" Encountered error during authentication: {type(e).__name__}: {e}")
+            logging.info(f'Traceback for debugging: {"".join(traceback.format_exception(e)).strip()}')
+            logging.warning(" Authentication NOT succesful. Continuing without initialization. Attempting to use local cache. Some features may not work.\n")
 
     def local_weights_path(self, model_name: str):
         return os.path.join(self.cache, "weights", model_name)
