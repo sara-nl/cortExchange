@@ -251,7 +251,7 @@ client = WDClient()
 
 
 class DefaultWebdavArgs:
-    URL = "https://researchdrive.surfsara.nl/public.php/webdav/"
+    URL = "https://researchdrive.surf.nl/public.php/webdav/"
     CACHE = f"{os.path.join(os.path.expanduser('~'), '.cache/cortexchange')}"
     LOGIN = os.getenv("WD_LOGIN", "WsSxVZHPqHlKcvY")
     PASSWORD = os.getenv("WD_PASSWORD", "PublicAccess1!")
