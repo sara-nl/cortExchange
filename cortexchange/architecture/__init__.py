@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import traceback
+import warnings
 from pathlib import Path
 from typing import Any, Optional, Tuple
 from dotenv import load_dotenv
@@ -33,7 +34,37 @@ class Architecture(abc.ABC):
 
         self.device = device
         client.download_model(model_name)
+        self._warn_on_architecture_mismatch(model_name)
         self.model = self.load_checkpoint(client.local_weights_path(model_name))
+
+    def _warn_on_architecture_mismatch(self, model_name):
+        """
+        Weights and architectures are stored independently, so any model can be loaded under any
+        architecture. That does not fail loudly - the preprocessing simply differs and the
+        predictions quietly change - so say something when the pairing is not the one the weights
+        were uploaded for.
+        """
+        manifest = client.read_model_manifest(model_name)
+        recorded = (manifest or {}).get("architecture")
+        if recorded is None:
+            # uploaded before manifests existed, or uploaded without one
+            return
+
+        # the module path is <...>.<group>.<Name> when packaged and <group>.<Name> when imported
+        # from the architecture cache
+        parts = type(self).__module__.split(".")
+        actual = (
+            f"{parts[-2]}/{type(self).__name__}"
+            if len(parts) >= 2
+            else type(self).__name__
+        )
+        if recorded != actual:
+            warnings.warn(
+                f"'{model_name}' was uploaded for {recorded} but is being loaded with "
+                f"{actual}. Predictions may be wrong.",
+                UserWarning,
+                stacklevel=2,
+            )
 
     @abc.abstractmethod
     def load_checkpoint(self, path):

@@ -123,6 +123,29 @@ Uploading new architecture is possible temporarily through the CLI tool as well.
 the given name. For longer term support, please create a PR with your model architecture, as this will add versioning
 combined with the rest of the repository.
 
+## Which architecture a model belongs to
+
+`upload-weights` requires `--model_architecture` and records it alongside the weights, together
+with the upload date and the source filename:
+
+```shell
+cortexchange-cli upload-weights --validate false \
+  --weights path/to/ckpt_step=5473.pth \
+  --weights_name surf/dinov2_vitb14_lora_O2_aug_0984 \
+  --model_architecture surf/TransferLearningV3
+```
+
+Loading those weights under a different architecture then warns:
+
+```
+UserWarning: 'surf/dinov2_vitb14_lora_O2_aug_0984' was uploaded for surf/TransferLearningV3 but is
+being loaded with surf/TransferLearningV2. Predictions may be wrong.
+```
+
+It is only a warning — pairing one model with several architectures is legitimate, and a mismatch
+changes the preprocessing rather than breaking the load. Weights uploaded before this existed carry
+no record and never warn.
+
 ## Env variables
 
 You can create a `.env` file where you are running containing the following two variables which are used for authentication to webdav:

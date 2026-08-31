@@ -39,6 +39,10 @@ def upload_weights():
     model_name = segments[-1].split(".")[0]
     temp_cache_path = "/".join(segments[:-2])
 
+    # the validation branch below rebinds args to a different parser's namespace, which does not
+    # carry this
+    architecture = args.model_architecture
+
     if args.validate:
         print("Validation")
         init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=temp_cache_path)
@@ -55,7 +59,9 @@ def upload_weights():
     remote_model_name = args.weights_name if args.weights_name is not None else model_name
     init_downloader(url=args.wd_url, login=args.wd_login, password=args.wd_password, cache=args.cache)
 
-    client.upload_model(remote_model_name, full_path_weights, force=args.force)
+    client.upload_model(
+        remote_model_name, full_path_weights, architecture=architecture, force=args.force
+    )
 
 
 def upload_architecture():
