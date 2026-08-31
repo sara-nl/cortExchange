@@ -42,6 +42,39 @@ data = predictor.prepare_data(input_path="/your/input/file.fits")
 predictor.predict(data)
 ```
 
+## TransferLearning architectures
+
+`surf/TransferLearningV3` is the current version of the LOFAR calibrator-selection model;
+`surf/TransferLearningV2` is kept for comparison. Both load checkpoints through the astroNNomy
+package, so both apply the LoRA weights a checkpoint contains. They differ in how the input is
+prepared, and therefore predict differently from the same weights:
+
+| | V2 | V3 |
+| --- | --- | --- |
+| Normalization | inputs reach the model unnormalized: the mean/std recorded in the checkpoint were looked up in a way that always missed | the recorded mean/std are applied |
+| Resampling | plain bilinear, with Gaussian noise added on every call, so predictions are stochastic | antialiased, and noise is opt-in through `--noise_sigma` |
+| DINOv3 backbones | not supported | supported |
+
+Both versions need the model package that the checkpoint was trained with, since a checkpoint
+stores the model class itself:
+
+```shell
+pip install git+https://github.com/LOFAR-VLBI/astroNNomy.git#egg=astroNNomy
+```
+
+An astroNNomy older than the LoRA-loading fix is rejected with a message telling you to upgrade —
+it would otherwise load these checkpoints with their adapters silently discarded.
+
+A checkpoint with a DINOv3 backbone additionally needs a local DINOv3 checkout and Meta's
+access-gated weights, since neither can be shipped:
+
+```shell
+export DINOV3_REPO_DIR=/path/to/facebookresearch/dinov3
+export DINOV3_WEIGHTS=/path/to/dinov3_weights
+```
+
+DINOv2 checkpoints need neither.
+
 # Adding new models
 
 You can add new models to the code through the CLI if it uses existing architecture, or create a PR following the below
