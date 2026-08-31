@@ -9,7 +9,8 @@ from cortexchange.architecture import Architecture
 
 import __main__
 from astropy.io import fits
-from .utils import load_checkpoint, resize_and_noise
+from .inference import load_checkpoint
+from .utils import resize_and_noise
 from .pre_processing_for_ml import normalize_fits
 
 
@@ -28,12 +29,7 @@ class TransferLearningV2(Architecture):
         variational_dropout: int = 0,
         **kwargs,
     ):
-        try:
-            super().__init__(model_name, device)
-        except ModuleNotFoundError as e:
-            if "No module named 'astronnomy'" in str(e):
-                raise ImportError("It seems that the astronnomy module is not installed. Install with `pip install git+https://github.com/LOFAR-VLBI/astroNNomy.git#egg=astroNNomy`")
-            raise e
+        super().__init__(model_name, device)
 
         self.dtype = torch.bfloat16
 

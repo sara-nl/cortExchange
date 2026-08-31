@@ -266,38 +266,6 @@ def get_optimizer(parameters: list[torch.Tensor], lr: float, **kwargs):
     return torch.optim.AdamW(parameters, lr=lr, **kwargs)
 
 
-def load_checkpoint(ckpt_path, device="cuda"):
-    if os.path.isfile(ckpt_path):
-        ckpt_dict = torch.load(ckpt_path, weights_only=False, map_location=device)
-    else:
-        files = os.listdir(ckpt_path)
-        possible_checkpoints = list(filter(lambda x: x.endswith(".pth"), files))
-        if len(possible_checkpoints) == 0:
-            raise ValueError(
-                f"No checkpoint file found in the given checkpoint directory: {ckpt_path}"
-            )
-        elif len(possible_checkpoints) != 1:
-            raise ValueError(
-                f"Too many checkpoint files in the given checkpoint directory. Please specify the model you want to load directly."
-            )
-        ckpt_path = f"{ckpt_path}/{possible_checkpoints[0]}"
-        ckpt_dict = torch.load(ckpt_path, weights_only=False, map_location=device)
-
-    config = ckpt_dict["config"]
-
-    model = ckpt_dict["model"](**config.model).to(device)
-
-    model.load_state_dict(ckpt_dict["model_state_dict"], strict=False)
-
-    optim = ckpt_dict.get("optimizer", torch.optim.AdamW)(
-        params=[param for param in model.parameters() if param.requires_grad],
-        **config.optimizer,
-    )
-    optim.load_state_dict(ckpt_dict["optimizer_state_dict"])
-
-    return {"model": model, "optim": optim, "config": config}
-
-
 def save_checkpoint(logging_dir, model, optimizer, global_step, config, **kwargs):
     os.makedirs(logging_dir, exist_ok=True)
     old_checkpoints = Path(logging_dir).glob("*.pth")
