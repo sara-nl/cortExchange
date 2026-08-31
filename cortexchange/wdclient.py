@@ -1,3 +1,5 @@
+import datetime
+import json
 import logging
 import os
 import sys
@@ -18,6 +20,9 @@ class WDClient:
 
     ARCH_PREFIX = "architectures"
     WEIGHT_PREFIX = "weights"
+    # Rides inside the weights tarball, next to the weights themselves, so that recording it
+    # costs no extra remote object and older manifest-less uploads keep working untouched.
+    MANIFEST_SUFFIX = ".json"
 
     def initialize(self, url: str, login: str, password: str, cache: str):
         self.options = {
@@ -49,6 +54,49 @@ class WDClient:
 
     def local_architecture_path(self, architecture_name: str):
         return os.path.join(self.cache, "architectures", architecture_name)
+
+    def local_manifest_path(self, model_name: str):
+        return self.local_weights_path(model_name) + self.MANIFEST_SUFFIX
+
+    def read_model_manifest(self, model_name: str):
+        """
+        What was recorded alongside these weights, or None if there is nothing to read.
+
+        Never raises: weights uploaded before manifests existed have none, and a damaged one
+        must not stop a model from loading.
+        """
+        try:
+            with open(self.local_manifest_path(model_name)) as f:
+                manifest = json.load(f)
+        except (OSError, ValueError):
+            return None
+        return manifest if isinstance(manifest, dict) else None
+
+    def _write_manifest(self, path, architecture, weights_path):
+        try:
+            from importlib.metadata import PackageNotFoundError, version
+
+            try:
+                cortexchange_version = version("cortExchange")
+            except PackageNotFoundError:
+                cortexchange_version = None
+        except ImportError:
+            cortexchange_version = None
+
+        with open(path, "w") as f:
+            json.dump(
+                {
+                    "architecture": architecture,
+                    "uploaded": datetime.datetime.now(datetime.timezone.utc)
+                    .replace(microsecond=0)
+                    .isoformat()
+                    .replace("+00:00", "Z"),
+                    "cortexchange": cortexchange_version,
+                    "source": os.path.basename(weights_path),
+                },
+                f,
+                indent=1,
+            )
 
     def remote_weights_path(self, model_name):
         return f"{self.WEIGHT_PREFIX}/{model_name}"
@@ -107,7 +155,7 @@ class WDClient:
         tar.close()
         os.remove(full_path_tar)
 
-    def upload_model(self, model_name, weights_path, force=False):
+    def upload_model(self, model_name, weights_path, architecture=None, force=False):
         group, model = model_name.split("/")
         tarred_file = f"{model}.tar.gz"
 
@@ -118,9 +166,18 @@ class WDClient:
         full_path_tar = os.path.join(self.cache, tarred_file)
 
         # Create tar and upload
+        manifest_path = None
         tar = tarfile.TarFile(full_path_tar, mode="w")
         tar.add(weights_path, arcname=model)
+        if architecture is not None:
+            # extractall() on download drops this next to the weights, so nothing else has to
+            # know about it
+            manifest_path = os.path.join(self.cache, f"{model}{self.MANIFEST_SUFFIX}")
+            self._write_manifest(manifest_path, architecture, weights_path)
+            tar.add(manifest_path, arcname=f"{model}{self.MANIFEST_SUFFIX}")
         tar.close()
+        if manifest_path is not None:
+            os.remove(manifest_path)
 
         self.bar = None
         try:

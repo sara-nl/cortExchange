@@ -74,7 +74,9 @@ def create_argparse_upload() -> argparse.Namespace:
     parser.add_argument(
         "--model_architecture",
         type=str,
-        help="The Architecture class to load."
+        required=True,
+        help="The Architecture class these weights are for. Recorded with the upload, so that "
+             "loading them under a different architecture warns."
     )
 
     _add_wd_args(parser)
