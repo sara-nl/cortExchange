@@ -1,17 +1,16 @@
 import argparse
 import functools
+import os
 
 import torch
+from astropy.io import fits
 from torchvision.transforms.functional import normalize
-import os
 
 from cortexchange.architecture import Architecture
 
-import __main__
-from astropy.io import fits
 from .inference import load_checkpoint
-from .utils import resize_and_noise
-from .pre_processing_for_ml import normalize_fits
+from .pre_processing import normalize_fits
+from .resampling import resize_and_noise
 
 
 def process_fits(fits_path):
@@ -21,12 +20,27 @@ def process_fits(fits_path):
     return normalize_fits(image_data)
 
 
-class TransferLearningV2(Architecture):
+class TransferLearningV3(Architecture):
+    """
+    Same model family as TransferLearningV2, differing in how the input is prepared.
+
+    Both versions load checkpoints through astroNNomy, so both apply the LoRA weights the
+    checkpoint contains. What V3 changes is the preprocessing:
+
+    - The dataset mean/std recorded in the checkpoint were looked up with getattr on a dict, which
+      always missed, so inputs reached the model unnormalized. They are read with .get now.
+    - Resampling injected Gaussian noise at prediction time, which made predictions stochastic.
+      Resampling is antialiased and noise is opt-in through noise_sigma.
+
+    Predictions therefore differ from V2 for the same weights.
+    """
+
     def __init__(
         self,
         model_name: str = None,
         device: str = None,
         variational_dropout: int = 0,
+        noise_sigma: float = 0.0,
         **kwargs,
     ):
         super().__init__(model_name, device)
@@ -38,6 +52,9 @@ class TransferLearningV2(Architecture):
 
         assert variational_dropout >= 0
         self.variational_dropout = variational_dropout
+
+        assert noise_sigma >= 0
+        self.noise_sigma = noise_sigma
 
         self.resize = None
 
@@ -67,29 +84,33 @@ class TransferLearningV2(Architecture):
         self, batch: torch.Tensor, mean=None, std=None, resize=None
     ) -> torch.Tensor:
         batch = batch.to(self.dtype).to(self.device)
+        transforms = getattr(self.config, "data_transforms", {})
+
         if resize is None:
             if self.resize is not None:
                 resize = self.resize
             else:
-                resize = getattr(self.config, "data_transforms", {}).get(
-                    "resize_val", resize
-                )
+                resize = transforms.get("resize_val", resize)
 
-        batch = self.resize_batch(batch, resize)
+        batch = self.resize_batch(batch, resize, self.noise_sigma)
 
+        # data_transforms is a plain dict, so these have to be read with .get - getattr silently
+        # missed and left the input unnormalized
         if mean is None:
-            mean = getattr(self.config.data_transforms, "mean", mean)
+            mean = transforms.get("mean", mean)
 
         if std is None:
-            std = getattr(self.config.data_transforms, "std", std)
+            std = transforms.get("std", std)
 
         batch = self.normalize_batch(batch, mean, std)
         return batch
 
     @staticmethod
-    def resize_batch(batch: torch.Tensor, resize: int) -> torch.Tensor:
+    def resize_batch(
+        batch: torch.Tensor, resize: int, noise_sigma: float = 0.0
+    ) -> torch.Tensor:
         if resize is not None:
-            batch = resize_and_noise(batch, resize)
+            batch = resize_and_noise(batch, resize, noise_sigma)
         return batch
 
     @staticmethod
@@ -135,4 +156,11 @@ class TransferLearningV2(Architecture):
             type=int,
             default=0,
             help="Optional: Amount of times to run the model to obtain a variational estimate of the stdev",
+        )
+        parser.add_argument(
+            "--noise_sigma",
+            type=float,
+            default=0.0,
+            help="Optional: stdev of Gaussian noise added after resampling. 0 (the default) keeps "
+            "inference deterministic; earlier versions always added noise.",
         )

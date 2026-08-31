@@ -11,3 +11,4 @@ numpy<=2.0.0
 xformers
 tensorboard
 scikit-learn
+astroNNomy @ git+https://github.com/LOFAR-VLBI/astroNNomy.git
