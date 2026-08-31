@@ -42,7 +42,7 @@ data = predictor.prepare_data(input_path="/your/input/file.fits")
 predictor.predict(data)
 ```
 
-## TransferLearning architectures
+## SURF's TransferLearning architectures
 
 `surf/TransferLearningV3` is the current version of the LOFAR calibrator-selection model;
 `surf/TransferLearningV2` is kept for comparison. Both load checkpoints through the astroNNomy
@@ -51,7 +51,6 @@ prepared, and therefore predict differently from the same weights:
 
 | | V2 | V3 |
 | --- | --- | --- |
-| Normalization | inputs reach the model unnormalized: the mean/std recorded in the checkpoint were looked up in a way that always missed | the recorded mean/std are applied |
 | Resampling | plain bilinear, with Gaussian noise added on every call, so predictions are stochastic | antialiased, and noise is opt-in through `--noise_sigma` |
 | DINOv3 backbones | not supported | supported |
 
